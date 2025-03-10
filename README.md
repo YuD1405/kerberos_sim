@@ -67,17 +67,18 @@ Tải .zip (giải nén) hoặc .msi (cài đặt tự động)
 ---
 
 ### **2. Cấu hình VS**
+** Tất cả ở chế độ x64 , RELEASE**
 1. **Cấu hình mysqlcppconnector**
    https://www.youtube.com/watch?v=a_W4zt5sR1M
 3. **Cấu hình openssl**
- Cách 1: Tự động tích hợp vào Visual Studio:
+*Cách 1: Tự động tích hợp vào Visual Studio:
 Chạy lệnh sau trong cmd hoặc PowerShell (ở thư mục chứa vcpkg):
  ```sh
 vcpkg integrate install
 ```
 Sau khi chạy lệnh này, tất cả các package cài bằng vcpkg sẽ tự động được nhận diện trong Visual Studio.
 
-Cách 2: Cấu hình thủ công nếu cách 1 không hoạt động\
+*Cách 2: Cấu hình thủ công nếu cách 1 không hoạt động\
 Thêm đường dẫn thư viện và include
 - Mở Visual Studio
 - Vào Project Properties (Nhấn chuột phải vào Project → Properties)
