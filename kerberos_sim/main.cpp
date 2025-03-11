@@ -2,6 +2,16 @@
 #include "kerberos_protocol.h"
 
 int main() {
+    // khởi tạo db
+    Database db("127.0.0.1", "root", "captyuddy1405", "testdb");
+    if (db.connect()) {
+        cout << "Connected with DB" << endl;
+    }
+    else {
+        cout << "Fail to connect with DB" << endl;
+        return 0;
+    }
+
     // Khởi tạo user
     string username = "alice";
     string password = "password123";
@@ -13,7 +23,7 @@ int main() {
     ServiceServer SS;
 
     // Khởi tạo protocol
-    KerberosProtocol kerberos(AS, TGS, SS);
+    KerberosProtocol kerberos(AS, TGS, SS, db);
 
     // KDC master key 
     string kdc_master_key = "master_key_of_quang_duy";
