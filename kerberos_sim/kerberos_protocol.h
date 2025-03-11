@@ -3,6 +3,7 @@
 
 #include <string>
 #include "client.h"
+#include "database.h"
 
 using namespace std;
 
@@ -11,9 +12,10 @@ private:
     AuthenticationServer AS;
     TicketGrantingServer TGS;
     ServiceServer SS;
+    Database& db;
 
 public:
-    KerberosProtocol(AuthenticationServer& AS, TicketGrantingServer& TGS, ServiceServer& SS);
+    KerberosProtocol(AuthenticationServer& AS, TicketGrantingServer& TGS, ServiceServer& SS, Database& db);
     // Gửi yêu cầu xác thực và nhận TGT
     string authenticateClient(Client& user);
 

@@ -2,10 +2,8 @@
 #include "encryption.h"
 #include <iostream>
 
-KerberosProtocol::KerberosProtocol(AuthenticationServer& AS, TicketGrantingServer& TGS, ServiceServer& SS) {
-    this->AS = AS;
-    this->TGS = TGS;
-    this->SS = SS;
+KerberosProtocol::KerberosProtocol(AuthenticationServer& AS, TicketGrantingServer& TGS, ServiceServer& SS, Database& db)
+    : AS(AS), TGS(TGS), SS(SS), db(db) {
 }
 
 // Gửi yêu cầu xác thực và nhận TGT
