@@ -3,7 +3,7 @@
 
 int main() {
     // khởi tạo db
-    Database db("127.0.0.1", "root", "captyuddy1405", "testdb");
+    Database db("127.0.0.1", "root", "DangDuy06072004!", "kerberos_db");
     if (db.connect()) {
         cout << "Connected with DB" << endl;
     }
@@ -19,7 +19,7 @@ int main() {
 
     // Khởi tạo các server
     AuthenticationServer AS;
-    TicketGrantingServer TGS;
+    TicketGrantingServer TGS(db);
     ServiceServer SS;
 
     // Khởi tạo protocol
@@ -27,6 +27,7 @@ int main() {
 
     // KDC master key 
     string kdc_master_key = "master_key_of_quang_duy";
+	vector<unsigned char> kdc_master_key_vector(kdc_master_key.begin(), kdc_master_key.end());
 
     // Bước 1: Xác thực với Authentication Server
     cout << "---------------Xac thuc voi Authen Server---------------" << endl;
