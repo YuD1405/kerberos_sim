@@ -55,18 +55,18 @@ string generateRandomSessionKey() {
     return sessionKey;
 }
 
-string TicketGrantingServer::Generate_Service_Ticket(const string& username, const string& serviceName) {
+pair<string, string> TicketGrantingServer::Generate_Service_Ticket(const string& username, const string& serviceName) {
     string sessionKey = generateRandomSessionKey();
     time_t expiration = time(nullptr) + 3600; // Hết hạn sau 1 giờ
 
     // 🔍 1️⃣ Truy vấn Service Secret Key từ database
-    string query = "SELECT service_key FROM services WHERE service_name = '" + serviceName + "';";
+    string query = "SELECT secret_key FROM services WHERE service_name = '" + serviceName + "';";
     db.fetchData(query);
 
     string serviceSecretKey;
-    if (db.executeQuery(query) == false) {
+    if (!db.executeQuery(query)) {
         cerr << "[ERROR - TGS] Failed to get Service Secret Key from database!" << endl;
-        return "";
+        return { "", "" }; // Trả về cặp rỗng nếu có lỗi
     }
 
     // 🛠 2️⃣ Tạo Service Ticket (ST)
@@ -77,7 +77,7 @@ string TicketGrantingServer::Generate_Service_Ticket(const string& username, con
     // 📝 3️⃣ Lưu vào database
     LogServiceTicketToDB(username, serviceName, encryptedServiceTicket, sessionKey, expiration);
 
-    return encryptedServiceTicket;
+    return { sessionKey, encryptedServiceTicket }; // Trả về cặp sessionKey + ST mã hóa
 }
 
 void TicketGrantingServer::LogServiceTicketToDB(const string& username, const string& serviceName, const string& encryptedTicket, const string& sessionKey, time_t expiration) {
