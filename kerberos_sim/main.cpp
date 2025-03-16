@@ -3,7 +3,7 @@
 
 int main() {
     // khởi tạo db
-    Database db("127.0.0.1", "root", "captyuddy1405", "testdb");
+    Database db("127.0.0.1", "root", "captyuddy1405", "kerberos_db");
     if (db.connect()) {
         cout << "Connected with DB" << endl;
     }
@@ -19,14 +19,15 @@ int main() {
 
     // Khởi tạo các server
     AuthenticationServer AS;
-    TicketGrantingServer TGS;
-    ServiceServer SS;
+    TicketGrantingServer TGS(db);
+    ServiceServer SS(db);
 
     // Khởi tạo protocol
-    KerberosProtocol kerberos(AS, TGS, SS, db);
+    KerberosProtocol kerberos(AS, TGS, SS);
 
     // KDC master key 
     string kdc_master_key = "master_key_of_quang_duy";
+    vector<unsigned char> kdc_master_key_vector(kdc_master_key.begin(), kdc_master_key.end());
 
     // Bước 1: Xác thực với Authentication Server
     cout << "---------------Xac thuc voi Authen Server---------------" << endl;
@@ -40,11 +41,13 @@ int main() {
     }
     cout << endl;
 
+    cout << "Encrypted TGT: " << encryptedTGT << endl;
+
     // Bước 2: Yêu cầu vé dịch vụ từ TGS
     cout << "---------------Yeu cau ve dich vu tu TGS---------------" << endl;
     string serviceName = "FileServer";
     string encryptedServiceTicket = kerberos.requestServiceTicket(user_1, encryptedTGT, serviceName);
-
+    cout << encryptedServiceTicket << endl;
     if (encryptedServiceTicket.find("[ERROR - KERBEROS]") != string::npos) {
         cout << "[ERROR - MAIN] Receive ST Failed!" << endl;
         return 0;
@@ -55,8 +58,9 @@ int main() {
     cout << endl;
 
     // Bước 3: Truy cập dịch vụ
+    string sessionkey_2 = "sessionekey_2";
     cout << "---------------Truy cap dich vu---------------" << endl;
-    if (kerberos.accessService(user_1, encryptedServiceTicket, serviceName)) {
+    if (kerberos.accessService(user_1, encryptedServiceTicket, sessionkey_2, serviceName)) {
         cout << "[INFO - MAIN] Access Service Successfully!" << endl;
     }
     else {

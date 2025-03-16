@@ -2,8 +2,8 @@
 #include "encryption.h"
 #include <iostream>
 
-KerberosProtocol::KerberosProtocol(AuthenticationServer& AS, TicketGrantingServer& TGS, ServiceServer& SS, Database& db)
-    : AS(AS), TGS(TGS), SS(SS), db(db) {
+KerberosProtocol::KerberosProtocol(AuthenticationServer& AS, TicketGrantingServer& TGS, ServiceServer& SS)
+    : AS(AS), TGS(TGS), SS(SS){
 }
 
 // Gửi yêu cầu xác thực và nhận TGT
@@ -31,8 +31,8 @@ string KerberosProtocol::requestServiceTicket(Client& user, const string& encryp
 }
 
 // Truy cập dịch vụ bằng Service Ticket
-bool KerberosProtocol::accessService(Client& user, const string& encrypted_service_ticket, const string& service_name) {
-    string granting_res = user.Access_Service(SS, encrypted_service_ticket, service_name);
+bool KerberosProtocol::accessService(Client& user, const string& encrypted_service_ticket, const string& sessionkey_2, const string& service_name) {
+    string granting_res = user.Access_Service(SS, encrypted_service_ticket, sessionkey_2, service_name);
     if (granting_res.find("Failed") != string::npos) {
         return 0;
     }

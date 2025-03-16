@@ -12,10 +12,9 @@ private:
     AuthenticationServer AS;
     TicketGrantingServer TGS;
     ServiceServer SS;
-    Database& db;
 
 public:
-    KerberosProtocol(AuthenticationServer& AS, TicketGrantingServer& TGS, ServiceServer& SS, Database& db);
+    KerberosProtocol(AuthenticationServer& AS, TicketGrantingServer& TGS, ServiceServer& SS);
     // Gửi yêu cầu xác thực và nhận TGT
     string authenticateClient(Client& user);
 
@@ -23,7 +22,7 @@ public:
     string requestServiceTicket(Client& user, const string& encrypted_tgt, const string& service_name);
 
     // Truy cập dịch vụ bằng Service Ticket
-    bool accessService(Client& user, const string& encrypted_service_ticket, const string& service_name);
+    bool accessService(Client& user, const string& encrypted_service_ticket, const string& sessionkey_2, const string& service_name);
 };
 
 #endif // KERBEROS_PROTOCOL_H

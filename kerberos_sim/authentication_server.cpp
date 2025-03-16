@@ -17,8 +17,8 @@ bool AuthenticationServer::AuthenticateUser(const string& username, const string
     return 0;
 }
 
-string AuthenticationServer::Generate_TGT(const string& username, const string& kdc_master_key) {
+string AuthenticationServer::Generate_TGT(const string& username, const vector<unsigned char>& kdc_master_key) {
     string sessionKey = "session_key_" + username;
     cout << "[INFO - AS] Session key (Authen): " << sessionKey << endl;
-    return Encrypt(sessionKey, kdc_master_key);
+    return Encryption::Encrypt(sessionKey, kdc_master_key);
 }

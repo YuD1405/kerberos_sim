@@ -18,17 +18,9 @@ private:
 
 public:
     Client(const string& user, const string& pw) : username(user), password(pw) {}
-    string getUserName();
-    string getPassword();
-    string getServiceTicket();
-    string getTGT();
-    string getSessionKey();
-    void setSessionKey(string session_key);
-    void setServiceTicket(string ticket);
-    void setTGT(string ticket);
     string Request_TGT(AuthenticationServer& AS);
     string UserRequest_ServiceTicket(TicketGrantingServer& TGS, const string& encrypted_TGT, const string& service_name);
-    string Access_Service(ServiceServer& SS, const string& service_ticket, const string& service_name);
+    string Access_Service(ServiceServer& SS, const string& encrypted_service_ticket, const string& sessionkey_2, const string& service_name);
 };
 
 #endif // CLIENT_H

@@ -7,9 +7,9 @@ using namespace std;
 
 class AuthenticationServer {
 public:
-    AuthenticationServer(); // Demo khởi tạo DB
+    AuthenticationServer(); 
     bool AuthenticateUser(const string& username, const string& password); // Xác thực người dùng
-    string Generate_TGT(const string& username, const string& kdc_master_key); // Cấp ticket TGT
+    string Generate_TGT(const string& username, const vector<unsigned char>& kdc_master_key); // Cấp ticket TGT
 
 private:
     unordered_map<string, string> userDB;
