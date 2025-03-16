@@ -54,7 +54,7 @@ string Client::Access_Service(ServiceServer& SS, const string& encrypted_service
         return "Failed: Invalid Service ticket";
     }
 
-    string granting_result = SS.Grant_Access(service_name);
+    string granting_result = SS.Grant_Access(username, service_name);
     cout << "[ACCESS - CLIENT] Accessible for " + service_name << endl;
     return granting_result;
     return "";

@@ -4,7 +4,7 @@
 #include <sstream>
 
 ServiceServer::ServiceServer(Database& database): db(database){
-    std::string query = "SELECT service_name FROM services";
+    string query = "SELECT service_name FROM services";
     auto results = db.executeSelectQuery(query);
 
     for (const auto& row : results) {
@@ -82,8 +82,29 @@ bool ServiceServer::Validate_Service_Ticket(string& userName, const string& encr
     return true;
 }
 
-string ServiceServer::Grant_Access(const string& service_name) {
-    return "[INFO - ST] Access Granted to " + service_name;
+string ServiceServer::Grant_Access(string& userName, const string& service_name) {
+    // Kiểm tra quyền truy cập
+    string query = "SELECT COUNT(*) FROM service_tickets WHERE username = '" + userName +
+        "' AND expires_at > NOW();";
+    auto result = db.executeSelectQuery(query);
+
+    if (result.empty() || result[0]["COUNT(*)"] == "0") {
+        cerr << "[ERROR - SS] Access Denied: No valid Service Ticket!" << endl;
+
+        // Lưu vào logs với trạng thái thất bại
+        string log_query = "INSERT INTO logs (username, status) VALUES ('" + userName + "', 'Failed');";
+        db.executeNonQuery(log_query);
+
+        return "[ERROR - SS] Access Denied!";
+    }
+
+    cout << "[INFO - SS] Access Granted to " << service_name << endl;
+
+    // Lưu lịch sử truy cập thành công vào bảng logs
+    string log_query = "INSERT INTO logs (username, status) VALUES ('" + userName + "', 'Success');";
+    db.executeNonQuery(log_query);
+
+    return "[INFO - SS] Access Granted to " + service_name;
 }
 
 bool ServiceServer::Add_Service(const string& service_name, const string& service_key) {
