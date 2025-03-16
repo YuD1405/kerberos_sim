@@ -2,6 +2,8 @@
 #include "encryption.h"
 #include <iostream>
 #include <sstream>
+#include <ctime>
+#include <iomanip>
 
 ServiceServer::ServiceServer(Database& database): db(database){
     string query = "SELECT service_name FROM services";
@@ -88,11 +90,16 @@ string ServiceServer::Grant_Access(string& userName, const string& service_name)
         "' AND expires_at > NOW();";
     auto result = db.executeSelectQuery(query);
 
+    // Lấy thời gian hiện tại (access_time)
+    time_t now = time(0);
+    std::stringstream access_time;
+    access_time << put_time(std::localtime(&now), "%Y-%m-%d %H:%M:%S");
+
     if (result.empty() || result[0]["COUNT(*)"] == "0") {
         cerr << "[ERROR - SS] Access Denied: No valid Service Ticket!" << endl;
 
         // Lưu vào logs với trạng thái thất bại
-        string log_query = "INSERT INTO logs (username, status) VALUES ('" + userName + "', 'Failed');";
+        string log_query = "INSERT INTO logs (username, access_time, status) VALUES ('" + userName + "', '" + access_time.str() + "', 'Failed');";
         db.executeNonQuery(log_query);
 
         return "[ERROR - SS] Access Denied!";
@@ -101,7 +108,7 @@ string ServiceServer::Grant_Access(string& userName, const string& service_name)
     cout << "[INFO - SS] Access Granted to " << service_name << endl;
 
     // Lưu lịch sử truy cập thành công vào bảng logs
-    string log_query = "INSERT INTO logs (username, status) VALUES ('" + userName + "', 'Success');";
+    string log_query = "INSERT INTO logs (username, access_time, status) VALUES ('" + userName + "', '" + access_time.str() + "', 'Success');";
     db.executeNonQuery(log_query);
 
     return "[INFO - SS] Access Granted to " + service_name;
