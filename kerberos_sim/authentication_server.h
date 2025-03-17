@@ -3,16 +3,28 @@
 
 #include <string>
 #include <unordered_map>
+#include "database.h"
 using namespace std;
 
 class AuthenticationServer {
 public:
-    AuthenticationServer(); // Demo khởi tạo DB
-    bool AuthenticateUser(const string& username, const string& password); // Xác thực người dùng
-    string Generate_TGT(const string& username, const string& kdc_master_key); // Cấp ticket TGT
+    AuthenticationServer(Database& database);
+    
+    // User management functions
+    bool AddUser(const string& username, const string& password);
+    bool RemoveUser(const string& username);
+    bool AuthenticateUser(const string& username, const string& password);
+    
+    // TGT generation
+    string Generate_TGT(const string& username, const string& kdc_master_key);
 
 private:
-    unordered_map<string, string> userDB;
+    Database& db;
+    
+    // Helper methods
+    string hashPassword(const string& password);
+    string generateRandomSessionKey();
+    void LogTGTIssuance(const string& username, const string& sessionKey, time_t expirationTime);
 };
 
 #endif

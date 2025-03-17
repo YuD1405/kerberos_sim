@@ -1,42 +1,43 @@
-#include <iostream>
 #include "client.h"
 
-// string Client::getUserName(){
-//     return username;
-// }
+// Getter methods
+string Client::getUserName() {
+    return username;
+}
 
-// string Client::getPassword(){
-//     return password;
-// }
+string Client::getPassword() {
+    return password;
+}
 
-// string Client::getServiceTicket(){
-//     return encrypted_service_ticket;
-// }
+string Client::getServiceTicket() {
+    return encrypted_service_ticket;
+}
 
-// string Client::getTGT(){
-//     return encrypted_TGT;
-// }
+string Client::getTGT() {
+    return encrypted_TGT;
+}
 
-// string Client::getSessionKey(){
-//     return session_key;
-// }
+string Client::getSessionKey() {
+    return session_key;
+}
 
-// void Client::setSessionKey(string session_key ){
-//     this->session_key = session_key;
-// }
+// Setter methods
+void Client::setSessionKey(string session_key) {
+    this->session_key = session_key;
+}
 
-// void Client::setServiceTicket(string ticket){
-//     this->encrypted_service_ticket = ticket;
-// }
+void Client::setServiceTicket(string ticket) {
+    this->encrypted_service_ticket = ticket;
+}
 
-// void Client::setTGT(string ticket){
-//     this->encrypted_TGT = ticket;
-// }
+void Client::setTGT(string ticket) {
+    this->encrypted_TGT = ticket;
+}
 
 string Client::Request_TGT(AuthenticationServer& AS) {
     cout << "[REQUEST - CLIENT] Sending authentication request for user " << username << "...\n";
     if (!AS.AuthenticateUser(username, password)) {
-        return "Failed: User does not exists.";
+        return "Failed: User authentication failed";
     }
 
     encrypted_TGT = AS.Generate_TGT(username, "master_key_of_quang_duy");
@@ -57,7 +58,7 @@ string Client::UserRequest_ServiceTicket(TicketGrantingServer& TGS, const string
         return "Failed: Invalid TGT";
     }
 
-    encrypted_service_ticket = TGS.Generate_Service_Ticket(service_name, "master_key_of_quang_duy");
+    encrypted_service_ticket = TGS.Generate_Service_Ticket(username, service_name);
 
     if (!encrypted_service_ticket.empty()) {
         cout << "[INFO - CLIENT] Client: Received Service Ticket !\n";

@@ -19,6 +19,9 @@ public:
     void disconnect();
     bool executeQuery(const std::string& query);
     void fetchData(const std::string& query);
+    sql::Connection* getConnection() {
+        return conn.get();
+    }
 
 private:
     std::string host;

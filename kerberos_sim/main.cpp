@@ -1,69 +1,90 @@
 ﻿#include <iostream>
 #include "kerberos_protocol.h"
+#include "authentication_server.h"
+#include "ticket_granting_server.h"
+#include "service_server.h"
+#include "database.h"
+#include "client.h"
 
 int main() {
-    // khởi tạo db
-    Database db("127.0.0.1", "root", "DangDuy06072004!", "kerberos_db");
-    if (db.connect()) {
-        cout << "Connected with DB" << endl;
+    // 1. Initialize database connection
+    Database db("127.0.0.1", "root", "Lhd@t2204", "kerberos_db");
+    if (!db.connect()) {
+        cerr << "[ERROR - MAIN] Failed to connect to database" << endl;
+        return 1;
     }
-    else {
-        cout << "Fail to connect with DB" << endl;
-        return 0;
-    }
+    cout << "[INFO - MAIN] Successfully connected to database" << endl;
 
-    // Khởi tạo user
-    string username = "alice";
-    string password = "password123";
-    Client user_1(username, password);
-
-    // Khởi tạo các server
-    AuthenticationServer AS;
+    // 2. Initialize servers
+    AuthenticationServer AS(db);
     TicketGrantingServer TGS(db);
     ServiceServer SS;
 
-    // Khởi tạo protocol
+    // 3. Set up the Kerberos protocol
     KerberosProtocol kerberos(AS, TGS, SS, db);
 
-    // KDC master key 
+    // 4. KDC master key (in a real system, this would be securely stored)
     string kdc_master_key = "master_key_of_quang_duy";
-	vector<unsigned char> kdc_master_key_vector(kdc_master_key.begin(), kdc_master_key.end());
 
-    // Bước 1: Xác thực với Authentication Server
-    cout << "---------------Xac thuc voi Authen Server---------------" << endl;
-    string encryptedTGT = kerberos.authenticateClient(user_1);
-    if (encryptedTGT.find("[ERROR - KERBEROS]") != string::npos) {
-        cout << "[ERROR - MAIN] Login Failed!" << endl;
-        return 0;
+    // 5. Demonstrate user management
+    cout << "\n========== User Management Demonstration ==========\n";
+
+    // Add a new user
+    string newUsername = "bob";
+    string newPassword = "securepass123";
+    if (AS.AddUser(newUsername, newPassword)) {
+        cout << "[INFO - MAIN] User " << newUsername << " added successfully" << endl;
+    }
+
+    // Test authentication with the new user
+    if (AS.AuthenticateUser(newUsername, newPassword)) {
+        cout << "[INFO - MAIN] Authentication successful for " << newUsername << endl;
     }
     else {
-        cout << "[INFO - MAIN] Login Successfully!" << endl;
-    }
-    cout << endl;
-
-    // Bước 2: Yêu cầu vé dịch vụ từ TGS
-    cout << "---------------Yeu cau ve dich vu tu TGS---------------" << endl;
-    string serviceName = "FileServer";
-    string encryptedServiceTicket = kerberos.requestServiceTicket(user_1, encryptedTGT, serviceName);
-
-    if (encryptedServiceTicket.find("[ERROR - KERBEROS]") != string::npos) {
-        cout << "[ERROR - MAIN] Receive ST Failed!" << endl;
-        return 0;
-    }
-    else {
-        cout << "[INFO - MAIN] Receive ST Successfully!" << endl;
-    }
-    cout << endl;
-
-    // Bước 3: Truy cập dịch vụ
-    cout << "---------------Truy cap dich vu---------------" << endl;
-    if (kerberos.accessService(user_1, encryptedServiceTicket, serviceName)) {
-        cout << "[INFO - MAIN] Access Service Successfully!" << endl;
-    }
-    else {
-        cout << "[ERROR - MAIN] Access to Service Failed!" << endl;
-        return 0;
+        cout << "[ERROR - MAIN] Authentication failed for " << newUsername << endl;
     }
 
+    // 6. Create a client for the new user
+    Client client(newUsername, newPassword);
+
+    // 7. Full Kerberos authentication flow
+    cout << "\n========== Full Kerberos Authentication Flow ==========\n";
+
+    // Step 1: Authenticate with AS and get TGT
+    cout << "---- Step 1: Authenticating with Authentication Server ----\n";
+    string encryptedTGT = kerberos.authenticateClient(client);
+    if (encryptedTGT.find("[ERROR]") != string::npos) {
+        cout << "[ERROR - MAIN] Authentication failed" << endl;
+        return 1;
+    }
+    cout << "[INFO - MAIN] Authentication successful, received TGT" << endl;
+
+    // Step 2: Request service ticket from TGS
+    //cout << "\n---- Step 2: Requesting Service Ticket from TGS ----\n";
+    //string serviceName = "FileServer";
+    string encryptedServiceTicket = kerberos.requestServiceTicket(client, encryptedTGT, serviceName);
+    //if (encryptedServiceTicket.find("[ERROR]") != string::npos) {
+    //    cout << "[ERROR - MAIN] Failed to obtain service ticket" << endl;
+    //    return 1;
+    //}
+    //cout << "[INFO - MAIN] Successfully obtained service ticket for " << serviceName << endl;
+
+    //// Step 3: Access the service
+    //cout << "\n---- Step 3: Accessing Service with Service Ticket ----\n";
+    //if (kerberos.accessService(client, encryptedServiceTicket, serviceName)) {
+    //    cout << "[INFO - MAIN] Successfully accessed " << serviceName << endl;
+    //}
+    //else {
+    //    cout << "[ERROR - MAIN] Failed to access " << serviceName << endl;
+    //    return 1;
+    //}
+
+    // 8. Optional: Clean up (remove test user)
+    cout << "\n========== Cleanup ==========\n";
+    if (AS.RemoveUser(newUsername)) {
+        cout << "[INFO - MAIN] User " << newUsername << " removed successfully" << endl;
+    }
+
+    cout << "\n[INFO - MAIN] Kerberos demonstration completed successfully" << endl;
     return 0;
 }

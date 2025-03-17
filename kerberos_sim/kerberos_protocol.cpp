@@ -2,39 +2,72 @@
 #include "encryption.h"
 #include <iostream>
 
-KerberosProtocol::KerberosProtocol(AuthenticationServer& AS, TicketGrantingServer& TGS, ServiceServer& SS, Database& db)
-    : AS(AS), TGS(TGS), SS(SS), db(db) {
+KerberosProtocol::KerberosProtocol(AuthenticationServer& as, TicketGrantingServer& tgs,
+    ServiceServer& ss, Database& database)
+    : AS(as), TGS(tgs), SS(ss), db(database) {
 }
 
 // Gửi yêu cầu xác thực và nhận TGT
 string KerberosProtocol::authenticateClient(Client& user) {
-    string encr_TGT = user.Request_TGT(AS);
+    // First authenticate the user credentials
+    if (!AS.AuthenticateUser(user.getUserName(), user.getPassword())) {
+        return "[ERROR] Authentication failed: Invalid credentials";
+    }
 
-    if (encr_TGT.find("Failed") != string::npos) {
-        return "[ERROR - KERBEROS] Authenticate user and generate TGT failed !";
+    // Generate TGT for the authenticated user
+    string encr_TGT = AS.Generate_TGT(user.getUserName(), "master_key_of_quang_duy");
+
+    if (encr_TGT.empty()) {
+        return "[ERROR] Failed to generate TGT";
     }
-    else {
-        return encr_TGT;
-    }
+
+    // Store TGT in client
+    user.setTGT(encr_TGT);
+
+    return encr_TGT;
 }
 
 // Yêu cầu Service Ticket từ TGS để nhận Service ticket
 string KerberosProtocol::requestServiceTicket(Client& user, const string& encrypted_tgt, const string& service_name) {
-    string encr_ST = user.UserRequest_ServiceTicket(TGS, encrypted_tgt, service_name);
+    // Validate the TGT
+    if (!TGS.Validate_TGT(encrypted_tgt, "master_key_of_quang_duy")) {
+        return "[ERROR] Invalid TGT";
+    }
 
-    if (encr_ST.find("Failed") != string::npos) {
-        return "[ERROR - KERBEROS] Request ST failed !";
+    // Generate service ticket
+    string encr_ST = TGS.Generate_Service_Ticket(user.getUserName(), service_name);
+
+    if (encr_ST.empty()) {
+        return "[ERROR] Failed to generate service ticket";
     }
-    else {
-        return encr_ST;
-    }
+
+    // Store service ticket in client
+    user.setServiceTicket(encr_ST);
+
+    return encr_ST;
 }
 
 // Truy cập dịch vụ bằng Service Ticket
 bool KerberosProtocol::accessService(Client& user, const string& encrypted_service_ticket, const string& service_name) {
-    string granting_res = user.Access_Service(SS, encrypted_service_ticket, service_name);
-    if (granting_res.find("Failed") != string::npos) {
-        return 0;
+    // Validate the service ticket
+    if (!SS.Validate_Service_Ticket(encrypted_service_ticket, "master_key_of_quang_duy")) {
+        cout << "[ERROR - KERBEROS] Invalid service ticket" << endl;
+        return false;
     }
-    return 1;
+
+    // Access the service
+    string granting_res = SS.Grant_Access(service_name);
+    if (granting_res.find("Access Granted") != string::npos) {
+        // Log successful access to database
+        string query = "INSERT INTO logs (username, status) VALUES ('" +
+            user.getUserName() + "', 'Success');";
+        db.executeQuery(query);
+        return true;
+    }
+
+    // Log failed access attempt
+    string query = "INSERT INTO logs (username, status) VALUES ('" +
+        user.getUserName() + "', 'Failed');";
+    db.executeQuery(query);
+    return false;
 }

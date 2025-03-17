@@ -3,7 +3,7 @@
 #include <iostream>
 
 bool ServiceServer::Validate_Service_Ticket(const string& encrypted_ST, const string& kdc_master_key) {
-    string decrypt_ST = Encryption::Decrypt(encrypted_ST, kdc_master_key);
+    string decrypt_ST = "test";//Encryption::Decrypt(encrypted_ST, kdc_master_key);
 
     cout << "[INFO - ST] Server is checking ticket... " << endl;
     if (decrypt_ST.find("decrypted") != string::npos) { // thêm check service có tồn tại không
