@@ -148,6 +148,7 @@ libssl.lib;mysqlcppconn-static.lib;%(AdditionalDependencies)</AdditionalDependen
     <ClInclude Include="client.h" />
     <ClInclude Include="database.h" />
     <ClInclude Include="encryption.h" />
+    <ClInclude Include="global.h" />
     <ClInclude Include="kerberos_protocol.h" />
     <ClInclude Include="service_server.h" />
     <ClInclude Include="ticket_granting_server.h" />

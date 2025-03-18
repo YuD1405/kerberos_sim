@@ -41,16 +41,24 @@ bool Database::executeQuery(const std::string& query) {
     }
 }
 
-void Database::fetchData(const std::string& query) {
+vector<map<string, string>> Database::executeSelectQuery(const string& query) {
+    vector<map<string, string>> results;
     try {
-        std::unique_ptr<sql::Statement> stmt(conn->createStatement());
-        std::unique_ptr<sql::ResultSet> res(stmt->executeQuery(query));
+        unique_ptr<sql::Statement> stmt(conn->createStatement());
+        unique_ptr<sql::ResultSet> res(stmt->executeQuery(query));
 
         while (res->next()) {
-            std::cout << "[INFO - DB] Data: " << res->getString(1) << std::endl;
+            map<string, string> row;
+            sql::ResultSetMetaData* meta = res->getMetaData();
+            int columnCount = meta->getColumnCount();
+            for (int i = 1; i <= columnCount; ++i) {
+                row[meta->getColumnLabel(i)] = res->getString(i);
+            }
+            results.push_back(row);
         }
     }
     catch (sql::SQLException& e) {
-        std::cerr << "[ERROR - DB] Bug fetching: " << e.what() << std::endl;
+        cerr << "[ERROR - DB] Error fetching data: " << e.what() << endl;
     }
+    return results;
 }

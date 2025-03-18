@@ -24,9 +24,9 @@ bool TicketGrantingServer::Validate_TGT(const string& encryptedTGT, const string
 
     // 2️⃣ Kiểm tra username có tồn tại trong database không
     string query = "SELECT username FROM users WHERE username = '" + username + "';";
-    db.fetchData(query);
+    auto result = db.executeSelectQuery(query);
 
-    if (db.executeQuery(query) == false) {
+    if (result.empty()) {
         cerr << "[ERROR - TGS] Username not found in database!" << endl;
         return false;
     }
@@ -61,16 +61,17 @@ string TicketGrantingServer::Generate_Service_Ticket(const string& username, con
 
     // 🔍 1️⃣ Truy vấn Service Secret Key từ database
     string query = "SELECT service_key FROM services WHERE service_name = '" + serviceName + "';";
-    db.fetchData(query);
+    auto result = db.executeSelectQuery(query);
 
-    string serviceSecretKey;
-    if (db.executeQuery(query) == false) {
+    if (result.empty()) {
         cerr << "[ERROR - TGS] Failed to get Service Secret Key from database!" << endl;
         return "";
     }
 
+    string serviceSecretKey = result[0]["service_key"];
+
     // 🛠 2️⃣ Tạo Service Ticket (ST)
-    string serviceTicketData = username + " | " + sessionKey + " | " + serviceName + " | " + to_string(expiration);
+    string serviceTicketData = username + "|" + sessionKey + "|" + serviceName + "|" + to_string(expiration);
     vector<unsigned char> keyVector = stringToVector(serviceSecretKey);
     string encryptedServiceTicket = Encryption::Encrypt(serviceTicketData, keyVector);
 

@@ -14,7 +14,8 @@ private:
     string password;
     string encrypted_TGT;
     string encrypted_service_ticket;
-    string session_key;
+    string session_key_1;
+    string session_key_2;
 
 public:
     Client(const string& user, const string& pw) : username(user), password(pw) {}
@@ -22,8 +23,10 @@ public:
     string getPassword();
     string getServiceTicket();
     string getTGT();
-    string getSessionKey();
-    void setSessionKey(string session_key);
+    string getSessionKey_1();
+    string getSessionKey_2();
+    void setSessionKey_1(string session_key);
+    void setSessionKey_2(string session_key);
     void setServiceTicket(string ticket);
     void setTGT(string ticket);
     string Request_TGT(AuthenticationServer& AS);

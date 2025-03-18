@@ -2,12 +2,21 @@
 #define SERVICE_SERVER_H
 
 #include <string>
+#include <vector>
+#include "database.h" 
 using namespace std;
 
 class ServiceServer {
+private:
+    vector<string> services;
+    Database& db;
+
 public:
-    bool Validate_Service_Ticket(const string& encrypted_ST, const string& kdc_master_key);
-    string Grant_Access(const string& service_name);
+    ServiceServer(Database& database);
+    bool Validate_Service_Ticket(const string& encrypted_ST, const string& service_name);
+    string Grant_Access(string& userName, const string& service_name);
+    bool Add_Service(const string& service_name, const string& service_key);
+    bool Remove_Service(const string& service_name);
 };
 
 #endif

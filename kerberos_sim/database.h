@@ -4,33 +4,35 @@
 #include <iostream>
 #include <string>
 #include <memory>
+#include <vector>
 #include <mysql_driver.h>
 #include <mysql_connection.h>
 #include <cppconn/statement.h>
 #include <cppconn/resultset.h>
 #include <cppconn/prepared_statement.h>
+using namespace std;
 
 class Database {
 public:
-    Database(const std::string& host, const std::string& user, const std::string& password, const std::string& dbname);
+    Database(const string& host, const string& user, const string& password, const string& dbname);
     ~Database();
 
     bool connect();
     void disconnect();
-    bool executeQuery(const std::string& query);
-    void fetchData(const std::string& query);
+    bool executeQuery(const string& query);
+    vector<map<string, string>> executeSelectQuery(const string& query);
     sql::Connection* getConnection() {
         return conn.get();
     }
 
 private:
-    std::string host;
-    std::string user;
-    std::string password;
-    std::string dbname;
+    string host;
+    string user;
+    string password;
+    string dbname;
 
     sql::mysql::MySQL_Driver* driver;
-    std::unique_ptr<sql::Connection> conn;
+    unique_ptr<sql::Connection> conn;
 };
 
 #endif // DATABASE_H
