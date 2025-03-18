@@ -182,9 +182,9 @@ int main() {
  
     // 8. Optional: Clean up (remove test user)
     cout << "\n========== Cleanup ==========\n";
-    if (AS.RemoveUser(newUsername)) {
+    /*if (AS.RemoveUser(newUsername)) {
         cout << "[INFO - MAIN] User " << newUsername << " removed successfully" << endl;
-    }
+    }*/
 
     cout << "\n[INFO - MAIN] Kerberos demonstration completed successfully" << endl;
     return 0;

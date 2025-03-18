@@ -81,17 +81,18 @@ string Client::UserRequest_ServiceTicket(TicketGrantingServer& TGS, const string
     }
 
     // Generate ST
-    encrypted_service_ticket = TGS.Generate_Service_Ticket(username, service_name);
+    pair<string, string> gen_return = TGS.Generate_Service_Ticket(username, service_name);
+    encrypted_service_ticket = gen_return.second;
 
     // Generate ssk2
+    session_key_2 = gen_return.first;
 
-
-    if (!encrypted_service_ticket.empty()) {
+    if (!encrypted_service_ticket.empty() || !session_key_2.empty()) {
         cout << "[INFO - CLIENT] Client: Received Service Ticket !\n";
         return encrypted_service_ticket;
     }
     else {
-        cerr << "[ERROR - CLIENT] Client: Received ST failed.\n";
+        cerr << "[ERROR - CLIENT] Client: Received ST / session key failed.\n";
         return "";
     }
 }
