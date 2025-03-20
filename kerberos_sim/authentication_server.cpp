@@ -122,19 +122,23 @@ string AuthenticationServer::Generate_TGT(const string& username, const string& 
     // Generate a random session key
     string sessionKey = generateRandomSessionKey();
     cout << "[INFO - AS] Generated session key for " << username << endl;
-    
+	cout << "--> Session key TGT: " << sessionKey << endl;
     // Set expiration time (e.g., 8 hours from now)
     time_t expirationTime = time(nullptr) + 8 * 3600;
     
     // Create TGT content (username | session key | expiration time)
     string tgtContent = username + "|" + sessionKey + "|" + to_string(expirationTime);
-    
+	cout << "--> TGT Content: " << tgtContent << endl;
     // Convert master key to vector for encryption
     vector<unsigned char> keyVector(kdc_master_key.begin(), kdc_master_key.end());
     
     // Encrypt TGT
     string encryptedTGT = Encryption::Encrypt(tgtContent, keyVector);
-    
+	cout << "--> Encrypted TGT: " << encryptedTGT;
+    //for (unsigned char c : encryptedTGT) {
+    //    printf("%02x", static_cast<unsigned char>(c));
+    //}
+	cout << endl;
     // Log TGT issuance to database
     LogTGTIssuance(username, sessionKey, expirationTime);
     
@@ -146,12 +150,7 @@ string AuthenticationServer::generateRandomSessionKey() {
     vector<unsigned char> randomBytes = Encryption::GenerateRandomKey();
     
     // Convert to hex string for readability
-    stringstream ss;
-    for (unsigned char byte : randomBytes) {
-        ss << hex << setw(2) << setfill('0') << (int)byte;
-    }
-    
-    return ss.str().substr(0, 32); // Return 32 characters (128 bits)
+    return string(randomBytes.begin(), randomBytes.end());
 }
 
 void AuthenticationServer::LogTGTIssuance(const string& username, const string& sessionKey, time_t expirationTime) {

@@ -68,7 +68,9 @@ string Client::Request_TGT(AuthenticationServer& AS) {
 
 string Client::UserRequest_ServiceTicket(TicketGrantingServer& TGS, const string& encrypted_TGT, const string& service_name) {
     // Decr sk1 by pw 
-
+	string pass = this->getPassword();
+	vector<unsigned char> password = vector<unsigned char>(pass.begin(), pass.end());
+	string decrypted_session_key_1 = Encryption::Decrypt(session_key_1, password);
     // Create authenticator
 
     // Encr by sk1

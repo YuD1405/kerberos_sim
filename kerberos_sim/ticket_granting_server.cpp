@@ -12,7 +12,7 @@ bool TicketGrantingServer::Validate_TGT(const string& encryptedTGT, const string
     string decrypted_TGT = Encryption::Decrypt(encryptedTGT, keyVector);
 
     cout << "[INFO - TGS] Checking TGT... " << endl;
-
+	cout << "--> Decrypted TGT: " << decrypted_TGT << endl;
     // 1️⃣ Kiểm tra định dạng TGT
     string username, sessionKey, expirationTime;
     stringstream ss(decrypted_TGT);
@@ -45,21 +45,17 @@ bool TicketGrantingServer::Validate_TGT(const string& encryptedTGT, const string
 }
 
 string generateRandomSessionKey() {
-    unsigned char key[32]; // 256-bit key
-    RAND_bytes(key, sizeof(key));
+    vector<unsigned char> randomBytes = Encryption::GenerateRandomKey();
 
-    string sessionKey;
-    for (int i = 0; i < 32; i++) {
-        sessionKey += to_string(key[i] % 10); // Convert to a readable format
-    }
-    return sessionKey;
+    // Convert to hex string for readability
+    return string(randomBytes.begin(), randomBytes.end());
 }
 
 pair<string, string> TicketGrantingServer::Generate_Service_Ticket(const string& username, const string& serviceName) {
     string sessionKey = generateRandomSessionKey();
     time_t expiration = time(nullptr) + 3600; // Hết hạn sau 1 giờ
 
-    // 🔍 1️⃣ Truy vấn Service Secret Key từ database
+    //// 🔍 1️⃣ Truy vấn Service Secret Key từ database
     string query = "SELECT service_key FROM services WHERE service_name = '" + serviceName + "';";
     auto result = db.executeSelectQuery(query);
 
@@ -70,11 +66,15 @@ pair<string, string> TicketGrantingServer::Generate_Service_Ticket(const string&
 
     string serviceSecretKey = result[0]["service_key"];
 
+	//string serviceSecretKey = "ServiceSecretKeyAABCDEF123456789";
+
     // 🛠 2️⃣ Tạo Service Ticket (ST)
     string serviceTicketData = username + "|" + sessionKey + "|" + serviceName + "|" + to_string(expiration);
     vector<unsigned char> keyVector = stringToVector(serviceSecretKey);
     string encryptedServiceTicket = Encryption::Encrypt(serviceTicketData, keyVector);
-
+	cout << "--> Session Key 2: " << sessionKey << endl;
+	cout << "--> Service Ticket Data: " << serviceTicketData << endl;
+	cout << "--> Encrypted Service Ticket: " << encryptedServiceTicket << endl;
     // 📝 3️⃣ Lưu vào database
     LogServiceTicketToDB(username, serviceName, encryptedServiceTicket, sessionKey, expiration);
 
