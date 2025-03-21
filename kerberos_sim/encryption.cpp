@@ -3,7 +3,8 @@
 #include <openssl/rand.h>
 #include <iostream>
 #include <vector>
-#include <cstring>
+#include <iomanip>
+#include <sstream>
 
 vector<unsigned char> Encryption::GenerateRandomKey() {
     const string hex_chars = "0123456789ABCDEF";
@@ -19,6 +20,26 @@ vector<unsigned char> Encryption::GenerateRandomKey() {
     return key;
 }
 
+// Chuyển đổi vector<unsigned char> sang chuỗi hex
+string bytesToHex(const vector<unsigned char>& bytes) {
+    stringstream ss;
+    for (unsigned char c : bytes) {
+        ss << hex << setw(2) << setfill('0') << (int)c;
+    }
+    return ss.str();
+}
+
+// Chuyển đổi chuỗi hex về vector<unsigned char>
+vector<unsigned char> hexToBytes(const string& hex) {
+    vector<unsigned char> bytes;
+    for (size_t i = 0; i < hex.length(); i += 2) {
+        string byteString = hex.substr(i, 2);
+        unsigned char byte = (unsigned char)stoi(byteString, nullptr, 16);
+        bytes.push_back(byte);
+    }
+    return bytes;
+}
+
 string Encryption::Encrypt(const string& plaintext, const vector<unsigned char>& key) {
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
@@ -26,7 +47,6 @@ string Encryption::Encrypt(const string& plaintext, const vector<unsigned char>&
         return "";
     }
 
-    // Khởi tạo mã hóa AES-256-ECB (không cần IV)
     if (EVP_EncryptInit_ex(ctx, EVP_aes_256_ecb(), nullptr, key.data(), nullptr) != 1) {
         cerr << "[ERROR] Lỗi khi khởi tạo mã hóa!" << endl;
         EVP_CIPHER_CTX_free(ctx);
@@ -51,17 +71,21 @@ string Encryption::Encrypt(const string& plaintext, const vector<unsigned char>&
     ciphertext_len += len;
 
     EVP_CIPHER_CTX_free(ctx);
-    return string(ciphertext.begin(), ciphertext.begin() + ciphertext_len);
+
+    // Chuyển ciphertext sang chuỗi hex để dễ đọc
+    return bytesToHex(vector<unsigned char>(ciphertext.begin(), ciphertext.begin() + ciphertext_len));
 }
 
-string Encryption::Decrypt(const string& ciphertext, const vector<unsigned char>& key) {
+string Encryption::Decrypt(const string& hexCiphertext, const vector<unsigned char>& key) {
+    // Chuyển từ chuỗi hex về dạng binary trước khi giải mã
+    vector<unsigned char> ciphertext = hexToBytes(hexCiphertext);
+
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
         cerr << "[ERROR] Không thể tạo context giải mã!" << endl;
         return "";
     }
 
-    // Khởi tạo AES-256-ECB (không cần IV)
     if (EVP_DecryptInit_ex(ctx, EVP_aes_256_ecb(), nullptr, key.data(), nullptr) != 1) {
         cerr << "[ERROR] Lỗi khi khởi tạo giải mã!" << endl;
         EVP_CIPHER_CTX_free(ctx);
@@ -71,7 +95,7 @@ string Encryption::Decrypt(const string& ciphertext, const vector<unsigned char>
     vector<unsigned char> plaintext(ciphertext.size());
     int len = 0, plaintext_len = 0;
 
-    if (EVP_DecryptUpdate(ctx, plaintext.data(), &len, reinterpret_cast<const unsigned char*>(ciphertext.data()), ciphertext.size()) != 1) {
+    if (EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), ciphertext.size()) != 1) {
         cerr << "[ERROR] Lỗi khi giải mã dữ liệu!" << endl;
         EVP_CIPHER_CTX_free(ctx);
         return "";
@@ -86,5 +110,6 @@ string Encryption::Decrypt(const string& ciphertext, const vector<unsigned char>
     plaintext_len += len;
 
     EVP_CIPHER_CTX_free(ctx);
+
     return string(plaintext.begin(), plaintext.begin() + plaintext_len);
 }
