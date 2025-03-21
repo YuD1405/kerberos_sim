@@ -16,7 +16,7 @@ public:
     bool AuthenticateUser(const string& username, const string& password);
     
     // TGT generation
-    string Generate_TGT(const string& username, const string& kdc_master_key);
+    pair<string, string> Generate_TGT(const string& username, const string& kdc_master_key, const string& password);
 
 private:
     Database& db;

@@ -145,9 +145,9 @@ int main() {
     // Step 1: Authenticate with AS and get TGT
     cout << "---- Step 1: Authenticating with Authentication Server ----\n";
 
-    string encryptedTGT = kerberos.authenticateClient(client);
+    pair<string, string> encryptedTGT = kerberos.authenticateClient(client);
 
-    if (encryptedTGT.empty()) {
+    if (encryptedTGT.first.empty() && encryptedTGT.second.empty()) {
         cout << "[ERROR - MAIN] Authentication failed" << endl;
         return 0;
     }

@@ -17,7 +17,7 @@ private:
 public:
     KerberosProtocol(AuthenticationServer& AS, TicketGrantingServer& TGS, ServiceServer& SS, Database& db);
     // Gửi yêu cầu xác thực và nhận TGT
-    string authenticateClient(Client& user);
+    pair<string, string> authenticateClient(Client& user);
 
     // Yêu cầu Service Ticket từ TGS để nhận Service ticket
     string requestServiceTicket(Client& user, const string& encrypted_tgt, const string& service_name);

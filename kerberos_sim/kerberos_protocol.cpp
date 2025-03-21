@@ -8,13 +8,13 @@ KerberosProtocol::KerberosProtocol(AuthenticationServer& as, TicketGrantingServe
 }
 
 // Gửi yêu cầu xác thực và nhận TGT
-string KerberosProtocol::authenticateClient(Client& user) {
+pair<string, string> KerberosProtocol::authenticateClient(Client& user) {
     // Generate TGT for the authenticated user
-    string encr_TGT = user.Request_TGT(AS);
+    pair<string, string> encr_TGT = user.Request_TGT(AS);
 
     // return to User
-    if (encr_TGT.empty()) {
-        return "";
+    if (encr_TGT.first == "" && encr_TGT.second == "") {
+        return { "","" };
     }
 
     // Store TGT in client

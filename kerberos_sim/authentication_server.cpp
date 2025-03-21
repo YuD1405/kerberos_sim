@@ -56,18 +56,28 @@ AuthenticationServer::AuthenticationServer(Database& database) : db(database) {
 
 bool AuthenticationServer::AddUser(const string& username, const string& password) {
     cout << "[INFO - AS] Adding user: " << username << endl;
-    
+
+    // First check if user already exists
+    string checkQuery = "SELECT COUNT(*) FROM users WHERE username = '" + username + "';";
+
+    int count = db.executeQuery(checkQuery);
+    if (count > 0) {
+        cout << "[INFO - AS] User " << username << " already exists\n";
+        return false;
+    }
+
     // Hash the password before storing
     string hashedPassword = hashPassword(password);
-    
+
     // Create SQL query to insert user
-    string query = "INSERT INTO users (username, password_hash) VALUES ('" + 
-                    username + "', '" + hashedPassword + "');";
-    
+    string query = "INSERT INTO users (username, password_hash) VALUES ('" +
+        username + "', '" + hashedPassword + "');";
+
     if (db.executeQuery(query)) {
         cout << "[INFO - AS] User " << username << " added successfully\n";
         return true;
-    } else {
+    }
+    else {
         cerr << "[ERROR - AS] Failed to add user " << username << endl;
         return false;
     }
@@ -118,7 +128,7 @@ bool AuthenticationServer::AuthenticateUser(const string& username, const string
     return authResult;
 }
 
-string AuthenticationServer::Generate_TGT(const string& username, const string& kdc_master_key) {
+pair<string, string> AuthenticationServer::Generate_TGT(const string& username, const string& kdc_master_key, const string& password) {
     // Generate a random session key
     string sessionKey = generateRandomSessionKey();
     cout << "[INFO - AS] Generated session key for " << username << endl;
@@ -135,14 +145,16 @@ string AuthenticationServer::Generate_TGT(const string& username, const string& 
     // Encrypt TGT
     string encryptedTGT = Encryption::Encrypt(tgtContent, keyVector);
 	cout << "--> Encrypted TGT: " << encryptedTGT;
-    //for (unsigned char c : encryptedTGT) {
-    //    printf("%02x", static_cast<unsigned char>(c));
-    //}
-	cout << endl;
+    
+    // Encrypt SS1
+    vector<unsigned char> password_vector(password.begin(), password.end());
+    string SSK1_encrypt = Encryption::Encrypt(sessionKey, password_vector);
+    cout << endl;
     // Log TGT issuance to database
     LogTGTIssuance(username, sessionKey, expirationTime);
     
-    return encryptedTGT;
+
+    return { SSK1_encrypt ,encryptedTGT };
 }
 
 string AuthenticationServer::generateRandomSessionKey() {

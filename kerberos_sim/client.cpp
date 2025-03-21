@@ -14,9 +14,6 @@ string Client::getServiceTicket() {
     return encrypted_service_ticket;
 }
 
-string Client::getTGT() {
-    return encrypted_TGT;
-}
 
 string Client::getSessionKey_1() {
     return session_key_1;
@@ -39,30 +36,30 @@ void Client::setServiceTicket(string ticket) {
     this->encrypted_service_ticket = ticket;
 }
 
-void Client::setTGT(string ticket) {
+void Client::setTGT(pair<string, string> ticket) {
     this->encrypted_TGT = ticket;
 }
 
-string Client::Request_TGT(AuthenticationServer& AS) {
+pair<string, string> Client::Request_TGT(AuthenticationServer& AS) {
     cout << "[REQUEST - CLIENT] Sending authentication request for user " << username << "...\n";
     if (!AS.AuthenticateUser(username, password)) {
         cerr << "[ERROR - CLIENT] Authentication failed.\n";
-        return "";
+        return { "","" };
     }
 
     // Generate TGT for the authenticated user
-    encrypted_TGT = AS.Generate_TGT(username, kdc_master_key);
+    encrypted_TGT = AS.Generate_TGT(username, kdc_master_key, password);
 
     // Generate session key 1
 
 
-    if (!encrypted_TGT.empty()) {
+    if (!encrypted_TGT.first.empty() && !encrypted_TGT.second.empty()) {
         cout << "[INFO - CLIENT] Received TGT. Authentication successful!\n";
         return encrypted_TGT;
     }
     else {
         cerr << "[ERROR - CLIENT] Generate ticket failed.\n";
-        return "";
+        return { "","" };
     }
 }
 
