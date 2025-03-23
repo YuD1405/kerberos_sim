@@ -158,7 +158,7 @@ int main() {
     cout << "\n---- Step 2: Requesting Service Ticket from TGS ----\n";
 
     string serviceName = "FileService";
-    string encryptedServiceTicket = kerberos.requestServiceTicket(client, encryptedTGT, serviceName);
+    string encryptedServiceTicket = kerberos.requestServiceTicket(client, encryptedTGT.second, serviceName);
 
     if (encryptedServiceTicket.empty()) {
         cout << "[ERROR - MAIN] Failed to obtain service ticket" << endl;

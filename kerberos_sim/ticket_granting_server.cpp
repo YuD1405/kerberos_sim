@@ -7,23 +7,42 @@ vector<unsigned char> stringToVector(const string& str) {
     return vector<unsigned char>(str.begin(), str.end());
 }
 
-bool TicketGrantingServer::Validate_TGT(const string& encryptedTGT, const string& kdc_master_key) {
+bool TicketGrantingServer::Validate_TGT(const string& encryptedTGT, const string& kdc_master_key, const string& encrypted_authenticator) {
+    // 🔐 Decrypt TGT
     vector<unsigned char> keyVector = stringToVector(kdc_master_key);
     string decrypted_TGT = Encryption::Decrypt(encryptedTGT, keyVector);
-
     cout << "[INFO - TGS] Checking TGT... " << endl;
-	cout << "--> Decrypted TGT: " << decrypted_TGT << endl;
-    // 1️⃣ Kiểm tra định dạng TGT
-    string username, sessionKey, expirationTime;
-    stringstream ss(decrypted_TGT);
+    cout << "--> Decrypted TGT: " << decrypted_TGT << endl;
 
-    if (!(getline(ss, username, '|') && getline(ss, sessionKey, '|') && getline(ss, expirationTime, '|'))) {
+    // ➕ Parse TGT
+    string username_TGT, sessionKey, expirationTime;
+    stringstream ss(decrypted_TGT);
+    if (!(getline(ss, username_TGT, '|') && getline(ss, sessionKey, '|') && getline(ss, expirationTime, '|'))) {
         cerr << "[ERROR - TGS] Invalid TGT format!" << endl;
         return false;
     }
 
+    // 🔐 Decrypt Authenticator bằng sessionKey
+    vector<unsigned char> sk1_vector(sessionKey.begin(), sessionKey.end());
+    string decrypted_authenticator = Encryption::Decrypt(encrypted_authenticator, sk1_vector);
+    cout << "--> Decrypted Authenticator: " << decrypted_authenticator << endl;
+
+    // ➕ Parse Authenticator
+    string username_auth, timestamp_str;
+    stringstream ss_auth(decrypted_authenticator);
+    if (!(getline(ss_auth, username_auth, '|') && getline(ss_auth, timestamp_str, '|'))) {
+        cerr << "[ERROR - TGS] Invalid Authenticator format!" << endl;
+        return false;
+    }
+
+    // ✅ So khớp username
+    if (username_auth != username_TGT) {
+        cerr << "[ERROR - TGS] Authenticator username does not match TGT!" << endl;
+        return false;
+    }
+
     // 2️⃣ Kiểm tra username có tồn tại trong database không
-    string query = "SELECT username FROM users WHERE username = '" + username + "';";
+    string query = "SELECT username FROM users WHERE username = '" + username_TGT + "';";
     auto result = db.executeSelectQuery(query);
 
     if (result.empty()) {
@@ -40,7 +59,7 @@ bool TicketGrantingServer::Validate_TGT(const string& encryptedTGT, const string
         return false;
     }
 
-    cout << "[INFO - TGS] Valid TGT!" << endl;
+    cout << "[INFO - TGS] TGT and Authenticator are valid!" << endl;
     return true;
 }
 

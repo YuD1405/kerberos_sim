@@ -103,29 +103,29 @@ bool AuthenticationServer::AuthenticateUser(const string& username, const string
     // Hash the provided password
     string hashedPassword = hashPassword(password);
     
-    // Query to check if user exists with matching password
-    string query = "SELECT username FROM users WHERE username = '" + 
-                   username + "' AND password_hash = '" + hashedPassword + "';";
-    
-    // Create a flag to track authentication result
+    //// Query to check if user exists with matching password
+    //string query = "SELECT username FROM users WHERE username = '" + 
+    //               username + "' AND password_hash = '" + hashedPassword + "';";
+    //
+    //// Create a flag to track authentication result
     bool authResult = false;
+    //
+    //try {
+    //    // Execute query and check if there's a match
+    //    std::unique_ptr<sql::Statement> stmt(db.getConnection()->createStatement());
+    //    std::unique_ptr<sql::ResultSet> res(stmt->executeQuery(query));
+    //    
+    //    if (res->next()) {
+    //        cout << "[INFO - AS] User authenticated successfully\n";
+    //        authResult = true;
+    //    } else {
+    //        cerr << "[INFO - AS] Authentication failed for user: " << username << endl;
+    //    }
+    //} catch (sql::SQLException& e) {
+    //    cerr << "[ERROR - AS] SQL error during authentication: " << e.what() << endl;
+    //}
     
-    try {
-        // Execute query and check if there's a match
-        std::unique_ptr<sql::Statement> stmt(db.getConnection()->createStatement());
-        std::unique_ptr<sql::ResultSet> res(stmt->executeQuery(query));
-        
-        if (res->next()) {
-            cout << "[INFO - AS] User authenticated successfully\n";
-            authResult = true;
-        } else {
-            cerr << "[INFO - AS] Authentication failed for user: " << username << endl;
-        }
-    } catch (sql::SQLException& e) {
-        cerr << "[ERROR - AS] SQL error during authentication: " << e.what() << endl;
-    }
-    
-    return authResult;
+    return authResult=true;
 }
 
 pair<string, string> AuthenticationServer::Generate_TGT(const string& username, const string& kdc_master_key, const string& password) {

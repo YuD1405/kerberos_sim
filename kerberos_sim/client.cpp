@@ -1,4 +1,4 @@
-#include "client.h"
+﻿#include "client.h"
 #include "global.h"
 
 // Getter methods
@@ -51,7 +51,7 @@ pair<string, string> Client::Request_TGT(AuthenticationServer& AS) {
     encrypted_TGT = AS.Generate_TGT(username, kdc_master_key, password);
 
     // Generate session key 1
-
+    this->setSessionKey_1(encrypted_TGT.first);  // SSK1 được mã hóa bằng password
 
     if (!encrypted_TGT.first.empty() && !encrypted_TGT.second.empty()) {
         cout << "[INFO - CLIENT] Received TGT. Authentication successful!\n";
@@ -69,12 +69,17 @@ string Client::UserRequest_ServiceTicket(TicketGrantingServer& TGS, const string
 	vector<unsigned char> password = vector<unsigned char>(pass.begin(), pass.end());
 	string decrypted_session_key_1 = Encryption::Decrypt(session_key_1, password);
     // Create authenticator
+    time_t timestamp = time(nullptr);
+    string authenticator = username + "|" + to_string(timestamp);
 
     // Encr by sk1
+    vector<unsigned char> sk1_vec(decrypted_session_key_1.begin(), decrypted_session_key_1.end());
+    string encrypted_authenticator = Encryption::Encrypt(authenticator, sk1_vec);
+
 
     // Request
     cout << "[REQUEST - CLIENT] Sending service request for user " << username << "...\n";
-    if (!TGS.Validate_TGT(encrypted_TGT, kdc_master_key)) {
+    if (!TGS.Validate_TGT(encrypted_TGT, kdc_master_key, encrypted_authenticator)) {
         cerr << "[ERROR - CLIENT] Validate ticket failed.\n";
         return "";
     }

@@ -21,6 +21,7 @@ pair<string, string> KerberosProtocol::authenticateClient(Client& user) {
     user.setTGT(encr_TGT);
 
     // Store ssk_1 in client
+    user.setSessionKey_1(encr_TGT.first);
 
 
     return encr_TGT;
@@ -39,7 +40,7 @@ string KerberosProtocol::requestServiceTicket(Client& user, const string& encryp
     user.setServiceTicket(encr_ST);
 
     // Store ssk_2 in client
-
+    user.setSessionKey_2(encr_ST);
 
     return encr_ST;
 }
