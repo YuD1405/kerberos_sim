@@ -16,7 +16,7 @@ public:
     bool AuthenticateUser(const string& username, const string& password);
     
     // TGT generation
-    pair<string, string> Generate_TGT(const string& username, const string& kdc_master_key, const string& password);
+    pair<string, string> Generate_sk_ticket(const string& username, const string& password);
 
 private:
     Database& db;
@@ -24,7 +24,7 @@ private:
     // Helper methods
     string hashPassword(const string& password);
     string generateRandomSessionKey();
-    void LogTGTIssuance(const string& username, const string& sessionKey, time_t expirationTime);
+    //void LogTGTIssuance(const string& username, const string& sessionKey, time_t expirationTime);
 };
 
 #endif

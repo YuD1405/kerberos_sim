@@ -8,53 +8,40 @@ KerberosProtocol::KerberosProtocol(AuthenticationServer& as, TicketGrantingServe
 }
 
 // Gửi yêu cầu xác thực và nhận TGT
-pair<string, string> KerberosProtocol::authenticateClient(Client& user) {
+bool KerberosProtocol::phase_1(Client& user) {
     // Generate TGT for the authenticated user
-    pair<string, string> encr_TGT = user.Request_TGT(AS);
+    bool phase_1_res = user.Request_TGT(AS);
 
-    // return to User
-    if (encr_TGT.first == "" && encr_TGT.second == "") {
-        return { "","" };
+    if (!phase_1_res) {
+        cout << "[ERROR - KBR] Phase 1 failed" << endl;
+        return 0;
     }
 
-    // Store TGT in client
-    user.setTGT(encr_TGT);
-
-    // Store ssk_1 in client
-    user.setSessionKey_1(encr_TGT.first);
-
-
-    return encr_TGT;
+    cout << "[INFO - KBR] Phase 1 completed" << endl;
+    return 1;
 }
 
 // Yêu cầu Service Ticket từ TGS để nhận Service ticket
-string KerberosProtocol::requestServiceTicket(Client& user, const string& encrypted_tgt, const string& service_name) {
+bool KerberosProtocol::phase_2(Client& user, const string& service_name) {
     // Generate service ticket
-    string encr_ST = user.UserRequest_ServiceTicket(TGS, encrypted_tgt, service_name);
+    bool phase_2_res = user.Request_ServiceTicket(TGS, service_name);
 
-    if (encr_ST.empty()) {
-        return "";
+    if (!phase_2_res) {
+        cout << "[ERROR - KBR] Phase 2 failed" << endl;
+        return 0;
     }
-
-    // Store service ticket in client
-    user.setServiceTicket(encr_ST);
-
-    // Store ssk_2 in client
-    user.setSessionKey_2(encr_ST);
-
-    return encr_ST;
+    cout << "[INFO - KBR] Phase 2 completed" << endl;
+    return 1;
 }
 
 // Truy cập dịch vụ bằng Service Ticket
-bool KerberosProtocol::accessService(Client& user, const string& encrypted_service_ticket, const string& service_name) {
-    string granting_res = user.Access_Service(SS, encrypted_service_ticket, service_name);
-
-    // Log failed access attempt
-    if (granting_res.empty()) {
-        string query = "INSERT INTO logs (username, status) VALUES ('" +
-            user.getUserName() + "', 'Failed');";
-        db.executeQuery(query);
-        return false;
+bool KerberosProtocol::phase_3(Client& user, const string& service_name) {
+    bool phase_3_res = user.Access_Service(SS, service_name);
+    
+    if (!phase_3_res) {
+        cout << "[ERROR - KBR] Phase 3 failed" << endl;
+        return 0;
     }
-    return true;
+    cout << "[INFO - KBR] Phase 3 completed" << endl;
+    return 1;
 }

@@ -1,73 +1,39 @@
 ﻿#include "client.h"
 #include "global.h"
 
-// Getter methods
-string Client::getUserName() {
-    return username;
-}
-
-string Client::getPassword() {
-    return password;
-}
-
-string Client::getServiceTicket() {
-    return encrypted_service_ticket;
-}
-
-
-string Client::getSessionKey_1() {
-    return session_key_1;
-}
-
-string Client::getSessionKey_2() {
-    return session_key_2;
-}
-
-// Setter methods
-void Client::setSessionKey_1(string session_key) {
-    this->session_key_1 = session_key;
-}
-
-void Client::setSessionKey_2(string session_key) {
-    this->session_key_2 = session_key;
-}
-
-void Client::setServiceTicket(string ticket) {
-    this->encrypted_service_ticket = ticket;
-}
-
-void Client::setTGT(pair<string, string> ticket) {
-    this->encrypted_TGT = ticket;
-}
-
-pair<string, string> Client::Request_TGT(AuthenticationServer& AS) {
+bool Client::Request_TGT(AuthenticationServer& AS) {
     cout << "[REQUEST - CLIENT] Sending authentication request for user " << username << "...\n";
     if (!AS.AuthenticateUser(username, password)) {
         cerr << "[ERROR - CLIENT] Authentication failed.\n";
-        return { "","" };
+        return 0;
     }
 
     // Generate TGT for the authenticated user
-    encrypted_TGT = AS.Generate_TGT(username, kdc_master_key, password);
+    encrypted_return = AS.Generate_sk_ticket(username, password);
 
-    // Generate session key 1
-    this->setSessionKey_1(encrypted_TGT.first);  // SSK1 được mã hóa bằng password
+    // Store ticket 
+    encrypted_tgt = encrypted_return.second;
+    
+    // Store session key 1
+    encrypted_session_key_1 = encrypted_return.first;  // SSK1 được mã hóa bằng password
 
-    if (!encrypted_TGT.first.empty() && !encrypted_TGT.second.empty()) {
-        cout << "[INFO - CLIENT] Received TGT. Authentication successful!\n";
-        return encrypted_TGT;
+    if (!encrypted_session_key_1.empty() && !encrypted_tgt.empty()) {
+        cout << "[INFO - CLIENT] Client \"" << username << "\" : Received TGT.Authentication successful!\n";
+        return 1;
     }
     else {
-        cerr << "[ERROR - CLIENT] Generate ticket failed.\n";
-        return { "","" };
+        cerr << "[ERROR - CLIENT] Received ticket failed.\n";
+        return 0;
     }
 }
 
-string Client::UserRequest_ServiceTicket(TicketGrantingServer& TGS, const string& encrypted_TGT, const string& service_name) {
+bool Client::Request_ServiceTicket(TicketGrantingServer& TGS, const string& service_name) {
     // Decr sk1 by pw 
-	string pass = this->getPassword();
+	string pass = password;
 	vector<unsigned char> password = vector<unsigned char>(pass.begin(), pass.end());
-	string decrypted_session_key_1 = Encryption::Decrypt(session_key_1, password);
+	string decrypted_session_key_1 = Encryption::Decrypt(encrypted_session_key_1, password);
+    session_key_1 = decrypted_session_key_1;
+
     // Create authenticator
     time_t timestamp = time(nullptr);
     string authenticator = username + "|" + to_string(timestamp);
@@ -76,39 +42,56 @@ string Client::UserRequest_ServiceTicket(TicketGrantingServer& TGS, const string
     vector<unsigned char> sk1_vec(decrypted_session_key_1.begin(), decrypted_session_key_1.end());
     string encrypted_authenticator = Encryption::Encrypt(authenticator, sk1_vec);
 
-
     // Request
-    cout << "[REQUEST - CLIENT] Sending service request for user " << username << "...\n";
-    if (!TGS.Validate_TGT(encrypted_TGT, kdc_master_key, encrypted_authenticator)) {
+    cout << "[REQUEST - CLIENT] Sending service request by user " << username << " for service: " << service_name << "...\n";
+    if (!TGS.Validate_TGT(encrypted_tgt, encrypted_authenticator)) {
         cerr << "[ERROR - CLIENT] Validate ticket failed.\n";
-        return "";
+        return 0;
     }
 
-    // Generate ST
-    pair<string, string> gen_return = TGS.Generate_Service_Ticket(username, service_name);
+    // Server return 
+    auto gen_return = TGS.Generate_sk_Ticket(username, service_name, encrypted_tgt);
+
+    // Store ST
     encrypted_service_ticket = gen_return.second;
 
-    // Generate ssk2
-    session_key_2 = gen_return.first;
+    // Store ssk2
+    encrypted_session_key_2 = gen_return.first;
 
-    if (!encrypted_service_ticket.empty() || !session_key_2.empty()) {
-        cout << "[INFO - CLIENT] Client: Received Service Ticket !\n";
-        return encrypted_service_ticket;
+    if (!encrypted_service_ticket.empty() || !encrypted_session_key_2.empty()) {
+        cout << "[INFO - CLIENT] Client \"" << username << "\" : Received Service Ticket !\n";
+        return 1;
     }
     else {
-        cerr << "[ERROR - CLIENT] Client: Received ST / session key failed.\n";
-        return "";
+        cerr << "[ERROR - CLIENT] Client \"" << username << "\" : Received ST / session key failed.\n";
+        return 0;
     }
 }
 
-string Client::Access_Service(ServiceServer& SS, const string& service_ticket, const string& service_name) {
-    cout << "[ACCESS - CLIENT] Access to service: " << service_name << "...\n";
-    if (!SS.Validate_Service_Ticket(service_ticket, service_name)) {
+bool Client::Access_Service(ServiceServer& SS, const string& service_name) {
+    // Decr sk2 by sk1
+    vector<unsigned char> sk1_vec = vector<unsigned char>(session_key_1.begin(), session_key_1.end());
+    string decrypted_session_key_2 = Encryption::Decrypt(encrypted_session_key_2, sk1_vec);
+
+    // Create authenticator
+    time_t timestamp = time(nullptr);
+    string authenticator = username + "|" + to_string(timestamp);
+
+    // Encr authenticator by sk2
+    vector<unsigned char> sk2_vec(decrypted_session_key_2.begin(), decrypted_session_key_2.end());
+    string encrypted_authenticator = Encryption::Encrypt(authenticator, sk2_vec);
+
+    cout << "[INFO - CLIENT] Accessing to service: " << service_name << "...\n";
+
+    if (!SS.Validate_Service_Ticket(encrypted_service_ticket, encrypted_authenticator, service_name)) {
         cerr << "[ERROR - CLIENT] Validate service ticket failed.\n";
-        return "";
+        return 0;
     }
 
-    string granting_result = SS.Grant_Access(username ,service_name);
-    cout << "[ACCESS - CLIENT] Accessible for " + service_name << endl;
-    return granting_result;
+    bool res = SS.Grant_Access(username ,service_name);
+    if (!res) {
+        cout << "[ERROR - CLIENT] Client \"" << username << "\" : Access failed "<< endl;
+    }
+    cout << "[INFO - CLIENT] Client \"" << username << "\" : Accessible for " + service_name << endl;
+    return 1;
 }

@@ -12,25 +12,19 @@ class Client {
 private:
     string username;
     string password;
-    pair<string, string> encrypted_TGT;
+    pair<string, string> encrypted_return;
     string encrypted_service_ticket;
+    string encrypted_tgt;
+    string encrypted_session_key_1;
+    string encrypted_session_key_2;
     string session_key_1;
     string session_key_2;
 
 public:
     Client(const string& user, const string& pw) : username(user), password(pw) {}
-    string getUserName();
-    string getPassword();
-    string getServiceTicket();
-    string getSessionKey_1();
-    string getSessionKey_2();
-    void setSessionKey_1(string session_key);
-    void setSessionKey_2(string session_key);
-    void setServiceTicket(string ticket);
-    void setTGT(pair<string,string> ticket);
-    pair<string, string> Request_TGT(AuthenticationServer& AS);
-    string UserRequest_ServiceTicket(TicketGrantingServer& TGS, const string& encrypted_TGT, const string& service_name);
-    string Access_Service(ServiceServer& SS, const string& service_ticket, const string& service_name);
+    bool Request_TGT(AuthenticationServer& AS);
+    bool Request_ServiceTicket(TicketGrantingServer& TGS, const string& service_name);
+    bool Access_Service(ServiceServer& SS, const string& service_name);
 };
 
 #endif // CLIENT_H

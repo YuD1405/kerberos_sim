@@ -29,6 +29,18 @@ string bytesToHex(const vector<unsigned char>& bytes) {
     return ss.str();
 }
 
+void padKey(vector<unsigned char>& key) {
+    if (key.size() < 32) {
+        key.push_back('1');  // Thêm ký tự '1'
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<unsigned char> dis(0, 255);
+        while (key.size() < 32) {
+            key.push_back(dis(gen));  // Thêm các ký tự ngẫu nhiên
+        }
+    }
+}
+
 // Chuyển đổi chuỗi hex về vector<unsigned char>
 vector<unsigned char> hexToBytes(const string& hex) {
     vector<unsigned char> bytes;
@@ -40,7 +52,8 @@ vector<unsigned char> hexToBytes(const string& hex) {
     return bytes;
 }
 
-string Encryption::Encrypt(const string& plaintext, const vector<unsigned char>& key) {
+string Encryption::Encrypt(const string& plaintext, vector<unsigned char>& key) {
+    padKey(key);
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
         cerr << "[ERROR] Không thể tạo context mã hóa!" << endl;
@@ -76,7 +89,8 @@ string Encryption::Encrypt(const string& plaintext, const vector<unsigned char>&
     return bytesToHex(vector<unsigned char>(ciphertext.begin(), ciphertext.begin() + ciphertext_len));
 }
 
-string Encryption::Decrypt(const string& hexCiphertext, const vector<unsigned char>& key) {
+string Encryption::Decrypt(const string& hexCiphertext, vector<unsigned char>&key) {
+    padKey(key);
     // Chuyển từ chuỗi hex về dạng binary trước khi giải mã
     vector<unsigned char> ciphertext = hexToBytes(hexCiphertext);
 

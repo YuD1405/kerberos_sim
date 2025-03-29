@@ -5,6 +5,7 @@
 #include <openssl/sha.h>
 #include <iomanip>
 #include <sstream>
+#include "global.h"
 
 // Hash password using SHA-256
 string AuthenticationServer::hashPassword(const string& password) {
@@ -58,10 +59,10 @@ bool AuthenticationServer::AddUser(const string& username, const string& passwor
     cout << "[INFO - AS] Adding user: " << username << endl;
 
     // First check if user already exists
-    string checkQuery = "SELECT COUNT(*) FROM users WHERE username = '" + username + "';";
-
-    int count = db.executeQuery(checkQuery);
-    if (count > 0) {
+    string checkQuery = "SELECT COUNT(*) AS CNT FROM users WHERE username = '" + username + "';";
+    auto res = db.executeSelectQuery(checkQuery);
+    string count = res[0]["CNT"];
+    if (count != "0") {
         cout << "[INFO - AS] User " << username << " already exists\n";
         return false;
     }
@@ -103,32 +104,32 @@ bool AuthenticationServer::AuthenticateUser(const string& username, const string
     // Hash the provided password
     string hashedPassword = hashPassword(password);
     
-    //// Query to check if user exists with matching password
-    //string query = "SELECT username FROM users WHERE username = '" + 
-    //               username + "' AND password_hash = '" + hashedPassword + "';";
-    //
+    // Query to check if user exists with matching password
+    string query = "SELECT username FROM users WHERE username = '" + 
+                   username + "' AND password_hash = '" + hashedPassword + "';";
+    
     //// Create a flag to track authentication result
     bool authResult = false;
-    //
-    //try {
-    //    // Execute query and check if there's a match
-    //    std::unique_ptr<sql::Statement> stmt(db.getConnection()->createStatement());
-    //    std::unique_ptr<sql::ResultSet> res(stmt->executeQuery(query));
-    //    
-    //    if (res->next()) {
-    //        cout << "[INFO - AS] User authenticated successfully\n";
-    //        authResult = true;
-    //    } else {
-    //        cerr << "[INFO - AS] Authentication failed for user: " << username << endl;
-    //    }
-    //} catch (sql::SQLException& e) {
-    //    cerr << "[ERROR - AS] SQL error during authentication: " << e.what() << endl;
-    //}
     
-    return authResult=true;
+    try {
+        // Execute query and check if there's a match
+        std::unique_ptr<sql::Statement> stmt(db.getConnection()->createStatement());
+        std::unique_ptr<sql::ResultSet> res(stmt->executeQuery(query));
+        
+        if (res->next()) {
+            cout << "[INFO - AS] User authenticated successfully\n";
+            authResult = true;
+        } else {
+            cerr << "[INFO - AS] Authentication failed for user: " << username << endl;
+        }
+    } catch (sql::SQLException& e) {
+        cerr << "[ERROR - AS] SQL error during authentication: " << e.what() << endl;
+    }
+    
+    return authResult;
 }
 
-pair<string, string> AuthenticationServer::Generate_TGT(const string& username, const string& kdc_master_key, const string& password) {
+pair<string, string> AuthenticationServer::Generate_sk_ticket(const string& username, const string& password) {
     // Generate a random session key
     string sessionKey = generateRandomSessionKey();
     cout << "[INFO - AS] Generated session key for " << username << endl;
@@ -139,6 +140,7 @@ pair<string, string> AuthenticationServer::Generate_TGT(const string& username, 
     // Create TGT content (username | session key | expiration time)
     string tgtContent = username + "|" + sessionKey + "|" + to_string(expirationTime);
 	cout << "--> TGT Content: " << tgtContent << endl;
+
     // Convert master key to vector for encryption
     vector<unsigned char> keyVector(kdc_master_key.begin(), kdc_master_key.end());
     
@@ -150,8 +152,9 @@ pair<string, string> AuthenticationServer::Generate_TGT(const string& username, 
     vector<unsigned char> password_vector(password.begin(), password.end());
     string SSK1_encrypt = Encryption::Encrypt(sessionKey, password_vector);
     cout << endl;
+
     // Log TGT issuance to database
-    LogTGTIssuance(username, sessionKey, expirationTime);
+    //LogTGTIssuance(username, sessionKey, expirationTime);
     
 
     return { SSK1_encrypt ,encryptedTGT };
@@ -165,28 +168,28 @@ string AuthenticationServer::generateRandomSessionKey() {
     return string(randomBytes.begin(), randomBytes.end());
 }
 
-void AuthenticationServer::LogTGTIssuance(const string& username, const string& sessionKey, time_t expirationTime) {
-    // Create a table for TGT tracking if it doesn't exist
-    string createTableQuery = 
-        "CREATE TABLE IF NOT EXISTS tgt_logs ("
-        "id INT PRIMARY KEY AUTO_INCREMENT, "
-        "username VARCHAR(255) NOT NULL, "
-        "session_key VARCHAR(255) NOT NULL, "
-        "issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
-        "expires_at TIMESTAMP NOT NULL, "
-        "FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE"
-        ");";
-    
-    db.executeQuery(createTableQuery);
-    
-    // Insert TGT issuance record
-    string query = "INSERT INTO tgt_logs (username, session_key, expires_at) VALUES ('" +
-                   username + "', '" + sessionKey + "', FROM_UNIXTIME(" + 
-                   to_string(expirationTime) + "));";
-    
-    if (db.executeQuery(query)) {
-        cout << "[INFO - AS] TGT issuance logged successfully\n";
-    } else {
-        cerr << "[ERROR - AS] Failed to log TGT issuance\n";
-    }
-}
+//void AuthenticationServer::LogTGTIssuance(const string& username, const string& sessionKey, time_t expirationTime) {
+//    // Create a table for TGT tracking if it doesn't exist
+//    string createTableQuery = 
+//        "CREATE TABLE IF NOT EXISTS tgt_logs ("
+//        "id INT PRIMARY KEY AUTO_INCREMENT, "
+//        "username VARCHAR(255) NOT NULL, "
+//        "session_key VARCHAR(255) NOT NULL, "
+//        "issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+//        "expires_at TIMESTAMP NOT NULL, "
+//        "FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE"
+//        ");";
+//    
+//    db.executeQuery(createTableQuery);
+//    
+//    // Insert TGT issuance record
+//    string query = "INSERT INTO tgt_logs (username, session_key, expires_at) VALUES ('" +
+//                   username + "', '" + sessionKey + "', FROM_UNIXTIME(" + 
+//                   to_string(expirationTime) + "));";
+//    
+//    if (db.executeQuery(query)) {
+//        cout << "[INFO - AS] TGT issuance logged successfully\n";
+//    } else {
+//        cerr << "[ERROR - AS] Failed to log TGT issuance\n";
+//    }
+//}

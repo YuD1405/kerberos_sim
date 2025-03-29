@@ -14,13 +14,13 @@ ServiceServer::ServiceServer(Database & database) : db(database) {
     }
 }
 
-bool ServiceServer::Validate_Service_Ticket(const string& encrypted_ST, const string& service_name) {
+bool ServiceServer::Validate_Service_Ticket(const string& encrypted_ST, const string& encrypted_authenticator, const string& service_name) {
     // Lấy service key
     string query = "SELECT service_key FROM services WHERE service_name = '" + service_name + "';";
     auto result = db.executeSelectQuery(query);
 
     if (result.empty()) {  // 🔹 Sửa lỗi: Dùng executeSelectQuery() thay vì executeQuery()
-        cerr << "[ERROR - TGS] Failed to get Service Secret Key from database!" << endl;
+        cerr << "[ERROR - SS] Failed to get Service Secret Key from database!" << endl;
         return "";
     }
 
@@ -37,34 +37,63 @@ bool ServiceServer::Validate_Service_Ticket(const string& encrypted_ST, const st
     getline(ss2, service_name_ticket, '|');
     getline(ss2, expiration_time_str, '|');
 
-    cout << "[INFO - ST] Server is checking ticket... " << endl;
+    // 🔐 Decrypt Authenticator bằng sessionKey
+    vector<unsigned char> sk2_vector(SK2.begin(), SK2.end());
+    string decrypted_authenticator = Encryption::Decrypt(encrypted_authenticator, sk2_vector);
+    cout << "--> Decrypted Authenticator: " << decrypted_authenticator << endl;
+
+    // ➕ Parse Authenticator
+    string username_auth, timestamp_str;
+    stringstream ss_auth(decrypted_authenticator);
+    if (!(getline(ss_auth, username_auth, '|') && getline(ss_auth, timestamp_str, '|'))) {
+        cerr << "[ERROR - SS] Invalid Authenticator format!" << endl;
+        return false;
+    }
+
+    
+    cout << "[INFO - SS] Server is checking ticket... " << endl;
+
+    // ✅ So khớp username
+    if (username_auth != username_ticket) {
+        cerr << "[ERROR - SS] Authenticator username does not match TGT!" << endl;
+        return false;
+    }
+
+    // 2️⃣ Kiểm tra username có tồn tại trong database không
+    query = "SELECT username FROM users WHERE username = '" + username_ticket + "';";
+    result = db.executeSelectQuery(query);
+
+    if (result.empty()) {
+        cerr << "[ERROR - SS] Username not found in database!" << endl;
+        return false;
+    }
 
     // Check exp time
     time_t expiration_time = stoll(expiration_time_str);
     time_t current_time = time(nullptr);
 
     if (current_time > expiration_time) {
-        cout << "[ERROR - ST] Service Ticket has expired!" << endl;
+        cout << "[ERROR - SS] Service Ticket has expired!" << endl;
         return false;
     }
 
     // Check existance of service
     if (find(services.begin(), services.end(), service_name) == services.end()) {
-        cout << "[ERROR - ST] Service does not exists!" << endl;
+        cout << "[ERROR - SS] Service does not exists!" << endl;
         return false;
     }
 
     // Check matching service 
     if (service_name_ticket != service_name) {
-        cout << "[ERROR - ST] Services do not match!" << endl;
+        cout << "[ERROR - SS] Services do not match!" << endl;
         return false;
     }
 
-    cout << "[INFO] Service Ticket is valid for user: " << username_ticket << " accessing: " << service_name << endl;
+    cout << "[INFO - SS] Service Ticket is valid for user: " << username_ticket << " accessing: " << service_name << endl;
     return true;
 }
 
-string ServiceServer::Grant_Access(string& userName, const string& service_name) {
+bool ServiceServer::Grant_Access(string& userName, const string& service_name) {
     // Kiểm tra quyền truy cập
     string query = "SELECT COUNT(*) FROM service_tickets WHERE username = '" + userName +
         "' AND expires_at > NOW();";
@@ -84,7 +113,7 @@ string ServiceServer::Grant_Access(string& userName, const string& service_name)
         string log_query = "INSERT INTO logs (username, access_time, status) VALUES ('" + userName + "', '" + access_time.str() + "', 'Failed');";
         db.executeQuery(log_query);
 
-        return "[ERROR - SS] Access Denied!";
+        return 0;
     }
 
     cout << "[INFO - SS] Access Granted to " << service_name << endl;
@@ -93,7 +122,7 @@ string ServiceServer::Grant_Access(string& userName, const string& service_name)
     string log_query = "INSERT INTO logs (username, access_time, status) VALUES ('" + userName + "', '" + access_time.str() + "', 'Success');";
     db.executeQuery(log_query);
 
-    return "[INFO - SS] Access Granted to " + service_name;
+    return 1;
 }
 
 bool ServiceServer::Add_Service(const string& service_name, const string& service_key) {

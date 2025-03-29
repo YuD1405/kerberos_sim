@@ -2,12 +2,13 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include "global.h"
 
 vector<unsigned char> stringToVector(const string& str) {
     return vector<unsigned char>(str.begin(), str.end());
 }
 
-bool TicketGrantingServer::Validate_TGT(const string& encryptedTGT, const string& kdc_master_key, const string& encrypted_authenticator) {
+bool TicketGrantingServer::Validate_TGT(const string& encryptedTGT, const string& encrypted_authenticator) {
     // 🔐 Decrypt TGT
     vector<unsigned char> keyVector = stringToVector(kdc_master_key);
     string decrypted_TGT = Encryption::Decrypt(encryptedTGT, keyVector);
@@ -70,8 +71,17 @@ string generateRandomSessionKey() {
     return string(randomBytes.begin(), randomBytes.end());
 }
 
-pair<string, string> TicketGrantingServer::Generate_Service_Ticket(const string& username, const string& serviceName) {
-    string sessionKey = generateRandomSessionKey();
+pair<string, string> TicketGrantingServer::Generate_sk_Ticket(const string& username, const string& serviceName, const string & encrypted_tgt) {
+    // 🔐 Decrypt TGT
+    vector<unsigned char> keyVector = stringToVector(kdc_master_key);
+    string decrypted_TGT = Encryption::Decrypt(encrypted_tgt, keyVector);
+
+    // ➕ Parse TGT
+    string username_TGT, sessionKey_1, expirationTime;
+    stringstream ss(decrypted_TGT);
+    getline(ss, username_TGT, '|'); getline(ss, sessionKey_1, '|'); getline(ss, expirationTime, '|');
+
+    string sessionKey_2 = generateRandomSessionKey();
     time_t expiration = time(nullptr) + 3600; // Hết hạn sau 1 giờ
 
     //// 🔍 1️⃣ Truy vấn Service Secret Key từ database
@@ -85,19 +95,23 @@ pair<string, string> TicketGrantingServer::Generate_Service_Ticket(const string&
 
     string serviceSecretKey = result[0]["service_key"];
 
-	//string serviceSecretKey = "ServiceSecretKeyAABCDEF123456789";
-
     // 🛠 2️⃣ Tạo Service Ticket (ST)
-    string serviceTicketData = username + "|" + sessionKey + "|" + serviceName + "|" + to_string(expiration);
-    vector<unsigned char> keyVector = stringToVector(serviceSecretKey);
-    string encryptedServiceTicket = Encryption::Encrypt(serviceTicketData, keyVector);
-	cout << "--> Session Key 2: " << sessionKey << endl;
+    string serviceTicketData = username + "|" + sessionKey_2 + "|" + serviceName + "|" + to_string(expiration);
+    vector<unsigned char> serviceKeyVector = stringToVector(serviceSecretKey);
+    string encryptedServiceTicket = Encryption::Encrypt(serviceTicketData, serviceKeyVector);
+    
+    // Encrypt ssk2
+    vector<unsigned char> sk1Vector(sessionKey_1.begin(), sessionKey_1.end());
+    string encrypted_SSK2 = Encryption::Encrypt(sessionKey_2, sk1Vector);
+
+	cout << "--> Session Key 2: " << sessionKey_2 << endl;
 	cout << "--> Service Ticket Data: " << serviceTicketData << endl;
 	cout << "--> Encrypted Service Ticket: " << encryptedServiceTicket << endl;
-    // 📝 3️⃣ Lưu vào database
-    LogServiceTicketToDB(username, serviceName, encryptedServiceTicket, sessionKey, expiration);
 
-    return { sessionKey, encryptedServiceTicket }; // Trả về cặp sessionKey + ST mã hóa
+    // 📝 3️⃣ Lưu vào database
+    LogServiceTicketToDB(username, serviceName, encryptedServiceTicket, encrypted_SSK2, expiration);
+
+    return { encrypted_SSK2, encryptedServiceTicket }; // Trả về cặp sessionKey + ST mã hóa
 }
 
 void TicketGrantingServer::LogServiceTicketToDB(const string& username, const string& serviceName, const string& encryptedTicket, const string& sessionKey, time_t expiration) {
