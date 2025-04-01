@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include <string>
 #include "global.h"
 
 vector<unsigned char> stringToVector(const string& str) {
@@ -9,6 +10,7 @@ vector<unsigned char> stringToVector(const string& str) {
 }
 
 bool TicketGrantingServer::Validate_TGT(const string& encryptedTGT, const string& encrypted_authenticator) {
+    cout << "\n--------------- Validate ---------------" << endl;
     // 🔐 Decrypt TGT
     vector<unsigned char> keyVector = stringToVector(kdc_master_key);
     string decrypted_TGT = Encryption::Decrypt(encryptedTGT, keyVector);
@@ -61,6 +63,7 @@ bool TicketGrantingServer::Validate_TGT(const string& encryptedTGT, const string
     }
 
     cout << "[INFO - TGS] TGT and Authenticator are valid!" << endl;
+    cout << "----------------------------------------" << endl;
     return true;
 }
 
@@ -71,7 +74,24 @@ string generateRandomSessionKey() {
     return string(randomBytes.begin(), randomBytes.end());
 }
 
+string TicketGrantingServer::getEncryptedSK2(const string& encrypted_tgt) {
+    vector<unsigned char> keyVector = stringToVector(kdc_master_key);
+    string decrypted_TGT = Encryption::Decrypt(encrypted_tgt, keyVector);
+
+    string username_TGT, sessionKey_1, expirationTime;
+    stringstream ss(decrypted_TGT);
+    getline(ss, username_TGT, '|'); getline(ss, sessionKey_1, '|'); getline(ss, expirationTime, '|');
+
+    string sessionKey_2 = generateRandomSessionKey();
+    vector<unsigned char> sk1Vector(sessionKey_1.begin(), sessionKey_1.end());
+    string encrypted_SSK2 = Encryption::Encrypt(sessionKey_2, sk1Vector);
+
+    return encrypted_SSK2;
+}
+
 pair<string, string> TicketGrantingServer::Generate_sk_Ticket(const string& username, const string& serviceName, const string & encrypted_tgt) {
+    cout << "\n--------------- Generate ---------------" << endl;
+
     // 🔐 Decrypt TGT
     vector<unsigned char> keyVector = stringToVector(kdc_master_key);
     string decrypted_TGT = Encryption::Decrypt(encrypted_tgt, keyVector);
@@ -80,7 +100,7 @@ pair<string, string> TicketGrantingServer::Generate_sk_Ticket(const string& user
     string username_TGT, sessionKey_1, expirationTime;
     stringstream ss(decrypted_TGT);
     getline(ss, username_TGT, '|'); getline(ss, sessionKey_1, '|'); getline(ss, expirationTime, '|');
-
+    
     string sessionKey_2 = generateRandomSessionKey();
     time_t expiration = time(nullptr) + 3600; // Hết hạn sau 1 giờ
 
@@ -110,16 +130,17 @@ pair<string, string> TicketGrantingServer::Generate_sk_Ticket(const string& user
 
     // 📝 3️⃣ Lưu vào database
     LogServiceTicketToDB(username, serviceName, encryptedServiceTicket, encrypted_SSK2, expiration);
+    cout << "----------------------------------------" << endl;
 
     return { encrypted_SSK2, encryptedServiceTicket }; // Trả về cặp sessionKey + ST mã hóa
 }
 
 void TicketGrantingServer::LogServiceTicketToDB(const string& username, const string& serviceName, const string& encryptedTicket, const string& sessionKey, time_t expiration) {
-    string query = "INSERT INTO service_tickets (username, ticket_data, session_key, issued_at, expires_at) VALUES ('"
-        + username + "', '" + encryptedTicket + "', '" + sessionKey + "', NOW(), FROM_UNIXTIME(" + to_string(expiration) + "));";
+    string query = "INSERT INTO service_tickets (username, service_name, ticket_data, session_key, issued_at, expires_at) VALUES ('"
+        + username + "', '" + serviceName + "', '" + encryptedTicket + "', '" + sessionKey + "', NOW(), FROM_UNIXTIME(" + to_string(expiration) + "));";
 
     if (db.executeQuery(query)) {
-        cout << "[LOG - TGS] Service Ticket saved to DB!\n";
+        cout << "[LOG - TGS] Service Ticket saved to DB for service: " << serviceName << "!\n";
     }
     else {
         cout << "[ERROR - TGS] Failed to save Service Ticket to DB.\n";
@@ -146,4 +167,35 @@ void TicketGrantingServer::RemoveExpiredTickets() {
     else {
         cout << "[ERROR - TGS] Failed to remove expired tickets.\n";
     }
+}
+
+bool TicketGrantingServer::CheckExistST(const string&username, const string& serviceName) {
+    string query = "SELECT COUNT(*) FROM service_tickets WHERE username = '" + username +
+        "' AND service_name = '" + serviceName + "' AND expires_at > NOW();";
+    auto result = db.executeSelectQuery(query);
+
+    if (!result.empty() && stoi(result[0]["COUNT(*)"]) > 0) {
+        cout << "[INFO - TGS] Valid Service Ticket exists. No need to issue a new one.\n";
+        return 1;
+    }
+    return 0;
+}
+
+pair<string, string> TicketGrantingServer::getServiceTicket(const string& username, const string& serviceName) {
+    string query = "SELECT ticket_data, session_key FROM service_tickets "
+        "WHERE username = '" + username + "' "
+        "AND service_name = '" + serviceName + "' "
+        "AND expires_at > NOW();";
+
+    auto result = db.executeSelectQuery(query);
+
+    if (result.empty()) {
+        cerr << "[ERROR - DB] No valid service ticket found!" << endl;
+        return { "", "" };  // Không tìm thấy ST hợp lệ
+    }
+
+    string ticketData = result[0]["ticket_data"];
+    string sessionKey = result[0]["session_key"];
+
+    return { ticketData, sessionKey };
 }

@@ -52,7 +52,7 @@ string AuthenticationServer::hashPassword(const string& password) {
 }
 
 AuthenticationServer::AuthenticationServer(Database& database) : db(database) {
-    cout << "[INFO - AS] Authentication Server initialized\n";
+    //cout << "[INFO - AS] Authentication Server initialized\n";
 }
 
 bool AuthenticationServer::AddUser(const string& username, const string& password) {
@@ -99,7 +99,8 @@ bool AuthenticationServer::RemoveUser(const string& username) {
 }
 
 bool AuthenticationServer::AuthenticateUser(const string& username, const string& password) {
-    cout << "[INFO - AS] Authenticating user: " << username << endl;
+    cout << "\n--------------- Authenticate ---------------" << endl;
+    cout << "[INFO - AS] Authenticating user: " << username << "..." << endl;
     
     // Hash the provided password
     string hashedPassword = hashPassword(password);
@@ -120,19 +121,20 @@ bool AuthenticationServer::AuthenticateUser(const string& username, const string
             cout << "[INFO - AS] User authenticated successfully\n";
             authResult = true;
         } else {
-            cerr << "[INFO - AS] Authentication failed for user: " << username << endl;
+            cerr << "[INFO - AS] User does not exist or Wrong Password." << endl;
         }
     } catch (sql::SQLException& e) {
         cerr << "[ERROR - AS] SQL error during authentication: " << e.what() << endl;
     }
-    
+    cout << "--------------------------------------------\n" << endl;
     return authResult;
 }
 
 pair<string, string> AuthenticationServer::Generate_sk_ticket(const string& username, const string& password) {
+    cout << "\n--------------- Gernerate Ticket ---------------" << endl;
     // Generate a random session key
     string sessionKey = generateRandomSessionKey();
-    cout << "[INFO - AS] Generated session key for " << username << endl;
+    //cout << "[INFO - AS] Generated session key for " << username << endl;
 	cout << "--> Session key TGT: " << sessionKey << endl;
     // Set expiration time (e.g., 8 hours from now)
     time_t expirationTime = time(nullptr) + 8 * 3600;
@@ -146,17 +148,16 @@ pair<string, string> AuthenticationServer::Generate_sk_ticket(const string& user
     
     // Encrypt TGT
     string encryptedTGT = Encryption::Encrypt(tgtContent, keyVector);
-	cout << "--> Encrypted TGT: " << encryptedTGT;
+	cout << "--> Encrypted TGT: " << encryptedTGT << endl;
     
     // Encrypt SS1
     vector<unsigned char> password_vector(password.begin(), password.end());
     string SSK1_encrypt = Encryption::Encrypt(sessionKey, password_vector);
-    cout << endl;
 
     // Log TGT issuance to database
     //LogTGTIssuance(username, sessionKey, expirationTime);
     
-
+    cout << "------------------------------------------------\n" << endl;
     return { SSK1_encrypt ,encryptedTGT };
 }
 

@@ -19,6 +19,7 @@ private:
     string encrypted_session_key_2;
     string session_key_1;
     string session_key_2;
+    bool existST;
 
 public:
     Client(const string& user, const string& pw) : username(user), password(pw) {}

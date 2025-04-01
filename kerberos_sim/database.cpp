@@ -12,7 +12,7 @@ bool Database::connect() {
         driver = sql::mysql::get_mysql_driver_instance();
         conn.reset(driver->connect("tcp://" + host + ":3306", user, password));
         conn->setSchema(dbname);
-        std::cout << "[INFO - DB] Connected to DB!\n";
+        //std::cout << "[INFO - DB] Connected to DB!\n";
         return true;
     }
     catch (sql::SQLException& e) {

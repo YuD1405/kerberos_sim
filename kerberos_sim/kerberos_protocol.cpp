@@ -2,6 +2,25 @@
 #include "encryption.h"
 #include <iostream>
 
+vector<string> loadServices(Database& db) {
+    vector<string> services;
+    string query = "SELECT service_name FROM services;";
+    auto result = db.executeSelectQuery(query);
+
+    if (result.empty()) {
+        cerr << "[ERROR - SS] No services found in database!" << endl;
+        return services;
+    }
+
+    for (const auto& row : result) {
+        if (row.find("service_name") != row.end()) {
+            services.push_back(row.at("service_name"));
+        }
+    }
+
+    return services;
+}
+
 KerberosProtocol::KerberosProtocol(AuthenticationServer& as, TicketGrantingServer& tgs,
     ServiceServer& ss, Database& database)
     : AS(as), TGS(tgs), SS(ss), db(database) {
@@ -22,7 +41,19 @@ bool KerberosProtocol::phase_1(Client& user) {
 }
 
 // Yêu cầu Service Ticket từ TGS để nhận Service ticket
-bool KerberosProtocol::phase_2(Client& user, const string& service_name) {
+bool KerberosProtocol::phase_2(Client& user, string& service_name) {
+    // Select service    
+    vector<string> serviceList = loadServices(db);
+
+    cout << "Available service:" << endl;
+    for (int i = 0; i < serviceList.size(); i++) {
+        cout << i + 1 << ". " << serviceList[i] << endl;
+    }
+
+    int choice;
+    cout << endl << "Choose Service: "; cin >> choice;
+    service_name = serviceList[choice - 1];
+
     // Generate service ticket
     bool phase_2_res = user.Request_ServiceTicket(TGS, service_name);
 

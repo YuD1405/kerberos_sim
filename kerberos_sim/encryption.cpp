@@ -32,12 +32,8 @@ string bytesToHex(const vector<unsigned char>& bytes) {
 void padKey(vector<unsigned char>& key) {
     if (key.size() < 32) {
         key.push_back('1');  // Thêm ký tự '1'
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<unsigned char> dis(0, 255);
-        while (key.size() < 32) {
-            key.push_back(dis(gen));  // Thêm các ký tự ngẫu nhiên
-        }
+        size_t remaining = 32 - key.size();  // Số ký tự còn thiếu
+        key.insert(key.end(), remaining, '0');  // Thêm '0' cho đến đủ 32 ký tự
     }
 }
 
