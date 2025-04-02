@@ -1,5 +1,6 @@
 ﻿#include "client.h"
 #include "global.h"
+#include <windows.h>
 
 bool Client::Request_TGT(AuthenticationServer& AS) {
     cout << "[REQUEST - CLIENT] Sending authentication request for user " << username << "...\n";
@@ -7,6 +8,8 @@ bool Client::Request_TGT(AuthenticationServer& AS) {
         //cerr << "[ERROR - CLIENT] User does not exist or Wrong Password.\n";
         return 0;
     }
+
+    Sleep(3000);
 
     // Generate TGT for the authenticated user
     encrypted_return = AS.Generate_sk_ticket(username, password);
@@ -41,9 +44,6 @@ bool Client::Request_ServiceTicket(TicketGrantingServer& TGS, const string& serv
         auto serverReturn = TGS.getServiceTicket(username, service_name);
         encrypted_service_ticket = serverReturn.first;
         encrypted_session_key_2 = serverReturn.second;
-        
-        cout << "Exists ST: " << encrypted_service_ticket << endl;
-        cout << "Exists Sk2: " << encrypted_session_key_2 << endl;
 
         if (!encrypted_service_ticket.empty() || !encrypted_session_key_2.empty()) {
             cout << "[INFO - CLIENT] Client \"" << username << "\" : Received Service Ticket !\n";
@@ -73,7 +73,7 @@ bool Client::Request_ServiceTicket(TicketGrantingServer& TGS, const string& serv
         cerr << "[ERROR - CLIENT] Validate ticket failed.\n";
         return 0;
     }
-
+    Sleep(3000);
     // Server return 
     auto gen_return = TGS.Generate_sk_Ticket(username, service_name, encrypted_tgt);
 
@@ -122,7 +122,7 @@ bool Client::Access_Service(ServiceServer& SS, const string& service_name) {
         cerr << "[ERROR - CLIENT] Validate service ticket failed.\n";
         return 0;
     }
-
+    Sleep(3000);
     bool res = SS.Grant_Access(username ,service_name);
     if (!res) {
         //cout << "[ERROR - CLIENT] Client \"" << username << "\" : Access failed "<< endl;

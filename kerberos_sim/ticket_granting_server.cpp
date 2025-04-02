@@ -124,9 +124,10 @@ pair<string, string> TicketGrantingServer::Generate_sk_Ticket(const string& user
     vector<unsigned char> sk1Vector(sessionKey_1.begin(), sessionKey_1.end());
     string encrypted_SSK2 = Encryption::Encrypt(sessionKey_2, sk1Vector);
 
-	cout << "--> Session Key 2: " << sessionKey_2 << endl;
-	cout << "--> Service Ticket Data: " << serviceTicketData << endl;
-	cout << "--> Encrypted Service Ticket: " << encryptedServiceTicket << endl;
+	cout << "[INFO - TGS] Session Key 2: " << sessionKey_2 << endl;
+	cout << "[INFO - TGS] Service Ticket Data: " << serviceTicketData << endl;
+	cout << "[INFO - TGS] Encrypted Service Ticket: " << encryptedServiceTicket << endl;
+    cout << "[INFO - TGS] Encrypted Session Key 2: " << encrypted_SSK2 << endl;
 
     // 📝 3️⃣ Lưu vào database
     LogServiceTicketToDB(username, serviceName, encryptedServiceTicket, encrypted_SSK2, expiration);
@@ -196,6 +197,8 @@ pair<string, string> TicketGrantingServer::getServiceTicket(const string& userna
 
     string ticketData = result[0]["ticket_data"];
     string sessionKey = result[0]["session_key"];
+    cout << "[INFO - TGS] Exists ST: " << ticketData << endl;
+    cout << "[INFO - TGS] Exists Sk2: " << sessionKey << endl;
 
     return { ticketData, sessionKey };
 }

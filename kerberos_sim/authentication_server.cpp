@@ -135,24 +135,25 @@ pair<string, string> AuthenticationServer::Generate_sk_ticket(const string& user
     // Generate a random session key
     string sessionKey = generateRandomSessionKey();
     //cout << "[INFO - AS] Generated session key for " << username << endl;
-	cout << "--> Session key TGT: " << sessionKey << endl;
+	cout << "[INFO - AS] Session key TGT: " << sessionKey << endl;
     // Set expiration time (e.g., 8 hours from now)
     time_t expirationTime = time(nullptr) + 8 * 3600;
     
     // Create TGT content (username | session key | expiration time)
     string tgtContent = username + "|" + sessionKey + "|" + to_string(expirationTime);
-	cout << "--> TGT Content: " << tgtContent << endl;
+	cout << "[INFO - AS] TGT Content: " << tgtContent << endl;
 
     // Convert master key to vector for encryption
     vector<unsigned char> keyVector(kdc_master_key.begin(), kdc_master_key.end());
     
     // Encrypt TGT
     string encryptedTGT = Encryption::Encrypt(tgtContent, keyVector);
-	cout << "--> Encrypted TGT: " << encryptedTGT << endl;
+	cout << "[INFO - AS] Encrypted TGT: " << encryptedTGT << endl;
     
     // Encrypt SS1
     vector<unsigned char> password_vector(password.begin(), password.end());
     string SSK1_encrypt = Encryption::Encrypt(sessionKey, password_vector);
+    cout << "[INFO - AS] Encrypted session Key 1: " << SSK1_encrypt << endl;
 
     // Log TGT issuance to database
     //LogTGTIssuance(username, sessionKey, expirationTime);

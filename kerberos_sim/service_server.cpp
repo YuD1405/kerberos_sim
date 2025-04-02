@@ -42,7 +42,7 @@ bool ServiceServer::Validate_Service_Ticket(const string& encrypted_ST, const st
     // 🔐 Decrypt Authenticator bằng sessionKey
     vector<unsigned char> sk2_vector(SK2.begin(), SK2.end());
     string decrypted_authenticator = Encryption::Decrypt(encrypted_authenticator, sk2_vector);
-    cout << "--> Decrypted Authenticator: " << decrypted_authenticator << endl;
+    cout << "[INFO - SS] Decrypted Authenticator: " << decrypted_authenticator << endl;
 
     // ➕ Parse Authenticator
     string username_auth, timestamp_str;
