@@ -24,7 +24,7 @@ string kdc_master_key = "MySecretMasterKeyABCDEF123456789";
 int main() {
    
     cout << "Initiating system..." << endl;
-    //Sleep(3000);
+    Sleep(3000);
 
     // 1. Initialize database connection
     Database db("127.0.0.1", "root", "captyuddy1405", "kerberos_db");
@@ -38,11 +38,11 @@ int main() {
     AuthenticationServer AS(db);
     TicketGrantingServer TGS(db);
     ServiceServer SS(db);
-    //Sleep(1000);
+    Sleep(1000);
     cout << "[INFO] Authentication Server initiated" << endl;
-    //Sleep(1000);
+    Sleep(1000);
     cout << "[INFO] Ticket Granting Server initiated" << endl;
-    //Sleep(1000);
+    Sleep(1000);
     cout << "[INFO] Service Server initiated" << endl;
 
     // 3. Set up the Kerberos protocol
@@ -52,9 +52,9 @@ int main() {
     clearScreen();
 
     // 4. Create a client for the new user
-    string newUsername = "Alice123", newPassword = "SecurePassAlice1";
-    //cout << "Username: "; cin >> newUsername;
-    //cout << "Password: "; cin >> newPassword;
+    string newUsername, newPassword;
+    cout << "Username: "; cin >> newUsername;
+    cout << "Password: "; cin >> newPassword;
     Client client(newUsername, newPassword);
     cout << "Press Any button to Login..." << endl;
     system("pause");
